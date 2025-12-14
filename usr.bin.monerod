@@ -25,8 +25,8 @@ profile monerod /{usr/,}bin/monerod flags=(enforce,attach_disconnected,mediate_d
   network inet udp,
   network inet6 udp,
 
-  /mnt/ssd/monero/ r,
-  /mnt/ssd/monero/** rwk,
+  /var/lib/monero r,
+  /var/lib/monero/** rwk,
   /sys/devices/** r,
   owner @{HOME}/.bitmonero/ r,
   owner @{HOME}/.bitmonero/** rwk,
