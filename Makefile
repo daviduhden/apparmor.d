@@ -13,7 +13,7 @@ APPARMOR_DIR ?= $(DESTDIR)$(PREFIX)/etc/apparmor.d
 BINDIR ?= $(DESTDIR)$(PREFIX)/usr/local/bin
 APPARMOR_PARSER ?= apparmor_parser
 APPARMOR_FLAGS ?= -r -T -W
-APPARMOR_CHECK_FLAGS ?= -T -W -K -I $(APPARMOR_DIR)
+APPARMOR_CHECK_FLAGS ?= -T -W -K
 ABSTRACTIONS_DIR := $(APPARMOR_DIR)/abstractions
 ABSTRACTIONS := abstractions/tor 
 PROFILES := usr.sbin.tor usr.bin.i2pd usr.bin.monerod usr.bin.radicale usr.sbin.opendkim 
@@ -75,12 +75,17 @@ load: install unload-profiles
 .PHONY: check
 check: install unload-profiles
 	@command -v $(APPARMOR_PARSER) >/dev/null || { echo "$(INFO) apparmor_parser not found"; exit 1; }
-	@for f in $(PROFILES); do \
-		src=$(APPARMOR_DIR)/$$f; \
-		if [ -f $$src ]; then \
-			echo "$(INFO) Syntax check $$src"; \
-			$(APPARMOR_PARSER) $(APPARMOR_CHECK_FLAGS) $$src; \
-		else \
-			echo "$(INFO) Skipping missing $$src"; \
-		fi; \
+	@tmp=$$(mktemp -d /tmp/apparmor-check.XXXXXX); \
+	trap 'rm -rf $$tmp' EXIT INT TERM; \
+	install -d $$tmp/abstractions $$tmp/local; \
+	cp abstractions/tor $$tmp/abstractions/; \
+	for f in $(PROFILES); do \
+		install -d $$(dirname $$tmp/$$f); \
+		install -m 0644 $$f $$tmp/$$f; \
+		touch $$tmp/local/$$f; \
+	done; \
+	for f in $(PROFILES); do \
+		src=$$tmp/$$f; \
+		echo "$(INFO) Syntax check $$src"; \
+		$(APPARMOR_PARSER) $(APPARMOR_CHECK_FLAGS) -I $$tmp $$src; \
 	done
