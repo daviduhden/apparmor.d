@@ -44,10 +44,6 @@ sub error {
     exit $code;
 }
 
-# Backward-compatible aliases
-sub info     { log_info(@_); }
-sub warn_msg { warn_info(@_); }
-
 # Copy upstream profiles for apache2, postfix, dovecot, spamc/spamd, and clamav/clamd
 # from the AppArmor repository into this tree and ensure they use enforce mode.
 
