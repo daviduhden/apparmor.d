@@ -17,6 +17,7 @@ APPARMOR_CHECK_FLAGS ?= -T -W -K -I $(APPARMOR_DIR)
 ABSTRACTIONS_DIR := $(APPARMOR_DIR)/abstractions
 ABSTRACTIONS := abstractions/tor 
 PROFILES := usr.sbin.tor usr.bin.i2pd usr.bin.monerod usr.bin.radicale usr.sbin.opendkim 
+PROFILE_NAMES := tor i2pd monerod radicale opendkim
 INFO := ==> 
 
 .PHONY: install
@@ -51,8 +52,15 @@ install:
 	install -m 0755 sync-profiles.pl $(BINDIR)/sync-profiles
 	@echo "$(INFO) Install complete"
 
+
+.PHONY: unload-profiles
+unload-profiles:
+	@for name in $(PROFILE_NAMES); do \
+		$(APPARMOR_PARSER) -R $$name >/dev/null 2>&1 || true; \
+	done
+
 .PHONY: load
-load: install
+load: install unload-profiles
 	@command -v $(APPARMOR_PARSER) >/dev/null || { echo "$(INFO) apparmor_parser not found"; exit 1; }
 	@for f in $(PROFILES); do \
 		src=$(APPARMOR_DIR)/$$f; \
@@ -65,7 +73,7 @@ load: install
 	done
 
 .PHONY: check
-check: install
+check: install unload-profiles
 	@command -v $(APPARMOR_PARSER) >/dev/null || { echo "$(INFO) apparmor_parser not found"; exit 1; }
 	@for f in $(PROFILES); do \
 		src=$(APPARMOR_DIR)/$$f; \
