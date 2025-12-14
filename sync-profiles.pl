@@ -113,7 +113,6 @@ sub run {
     }
 
     copy_deps($checkout);
-    ensure_exec_tunable();
 }
 
 sub slurp {
