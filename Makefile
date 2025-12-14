@@ -7,8 +7,9 @@
 # See the LICENSE file at the top of the project tree for copyright
 # and license details.
 
-PREFIX ?=
+PREFIX ?= /usr
 DESTDIR ?=
+INSTALL ?= install
 APPARMOR_DIR ?= $(DESTDIR)$(PREFIX)/etc/apparmor.d
 BINDIR ?= $(DESTDIR)$(PREFIX)/usr/local/bin
 APPARMOR_PARSER ?= apparmor_parser
@@ -17,10 +18,10 @@ APPARMOR_CHECK_FLAGS ?= -T -W -K
 ABSTRACTIONS_DIR := $(APPARMOR_DIR)/abstractions
 ABSTRACTIONS := abstractions/tor 
 PROFILES := usr.sbin.tor usr.bin.i2pd usr.bin.monerod usr.bin.radicale usr.sbin.opendkim 
-PROFILE_NAMES := tor i2pd monerod radicale opendkim
+PROFILE_NAMES := tor i2pd monerod radicale opendkim 
 INFO := ==> 
 
-.PHONY: install
+.PHONY: install help unload-profiles load check uninstall
 install:
 	@echo "$(INFO) Creating target directories: $(ABSTRACTIONS_DIR) $(BINDIR)"
 	install -d $(ABSTRACTIONS_DIR) $(BINDIR)
@@ -46,11 +47,30 @@ install:
 			install -m 0644 /dev/null $$stub; \
 		fi; \
 	done
-	@echo "$(INFO) Removing legacy symlink if present: $(APPARMOR_DIR)/system_tor"
-	@rm -f $(APPARMOR_DIR)/system_tor # clean legacy symlink/name if present
-	@echo "$(INFO) Installing sync helper -> $(BINDIR)/sync-profiles"
-	install -m 0755 sync-profiles.pl $(BINDIR)/sync-profiles
+	@rm -f $(APPARMOR_DIR)/system_tor
+	@echo "$(INFO) Installing helper scripts..."
+	install -m 0755 scripts/sync-profiles.pl $(BINDIR)/sync-profiles
+	install -m 0755 scripts/enforce-complain-toggle.pl $(BINDIR)/enforce-complain-toggle
 	@echo "$(INFO) Install complete"
+
+
+.PHONY: help
+help:
+	@echo "$(INFO) Usage: make [target] [VARIABLE=value]"
+	@echo ""
+	@echo "Targets:"
+	@echo "  install            Install abstractions, profiles and helper scripts"
+	@echo "  load               Install and load profiles using $(APPARMOR_PARSER)"
+	@echo "  check              Syntax-check profiles (warnings treated as errors)"
+	@echo "  unload-profiles    Unload installed profiles by name"
+	@echo "  uninstall          Remove installed profiles, stubs and helper scripts"
+	@echo "  help               Show this help"
+	@echo ""
+	@echo "Variables:"
+	@echo "  PREFIX             Install prefix (default: $(PREFIX))"
+	@echo "  DESTDIR            Destination directory (default empty)"
+	@echo "  APPARMOR_PARSER    Path to apparmor_parser (default: $(APPARMOR_PARSER))"
+
 
 
 .PHONY: unload-profiles
@@ -58,6 +78,27 @@ unload-profiles:
 	@for name in $(PROFILE_NAMES); do \
 		$(APPARMOR_PARSER) -R $$name >/dev/null 2>&1 || true; \
 	done
+
+
+.PHONY: uninstall
+uninstall:
+	@echo "$(INFO) Removing helper scripts -> $(BINDIR)/sync-profiles"
+	@rm -f $(BINDIR)/sync-profiles $(BINDIR)/enforce-complain-toggle || true
+	@echo "$(INFO) Removing profiles from $(APPARMOR_DIR)"
+	@for f in $(PROFILES); do \
+		rm -f $(APPARMOR_DIR)/$$f || true; \
+	done
+	@echo "$(INFO) Removing local stubs"
+	@for f in $(PROFILES); do \
+		rm -f $(APPARMOR_DIR)/local/$$f || true; \
+	done
+	@echo "$(INFO) Removing abstractions"
+	@for f in $(ABSTRACTIONS); do \
+		rm -f $(ABSTRACTIONS_DIR)/$${f#abstractions/} || true; \
+	done
+	@echo "$(INFO) Cleanup empty directories (may fail if not empty)"
+	-rmdir --ignore-fail-on-non-empty $(APPARMOR_DIR)/local 2>/dev/null || true
+	-rmdir --ignore-fail-on-non-empty $(ABSTRACTIONS_DIR) 2>/dev/null || true
 
 .PHONY: load
 load: install unload-profiles

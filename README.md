@@ -1,58 +1,64 @@
 # apparmor.d
 
-Custom AppArmor policies: hardened profiles and abstractions for common daemons (Tor, i2pd, Monero `monerod`, Radicale, OpenDKIM) plus a small helper to sync selected upstream profiles.
+Collection of AppArmor profiles and abstractions for common daemons
+(Tor, i2pd, Monero `monerod`, Radicale, OpenDKIM), plus utilities to manage them.
 
-## Contents
-- **Profiles:** `usr.sbin.tor`, `usr.bin.i2pd`, `usr.bin.monerod`, `usr.bin.radicale`, `usr.sbin.opendkim`
-- **Abstractions:** `abstractions/tor` (shared read-only allowances for Tor and transports)
-- **Helper:** `sync-profiles.pl` (fetches upstream AppArmor profiles and forces enforce mode)
-- **Makefile:** installs local abstractions/profiles and the sync helper
+Main contents
+- Profiles: `usr.sbin.tor`, `usr.bin.i2pd`, `usr.bin.monerod`, `usr.bin.radicale`, `usr.sbin.opendkim`
+- Abstractions: `abstractions/tor`
+- Sync script: `scripts/sync-profiles.pl`
+- `Makefile`: installs profiles, abstractions and helper scripts
 
-## Conventions
-- **Dual-path patterns:** profiles prefer brace patterns like `/{usr/,}bin/...` and `/{,var/}run/...` to cover distro differences.
-- **Named profiles:** profiles use a stable name (e.g., `profile tor /{usr/,}sbin/tor`) rather than relying on a path-only identifier.
-- **Minimal writes:** abstractions avoid writable paths; writable directories appear only in specific profiles (e.g., Tor state, Radicale collections).
-
-## Install
-Use the Makefile to install abstractions and the sync helper:
+Quick `Makefile` usage
+- Install profiles and helpers:
 
 ```sh
-make install PREFIX= DESTDIR=
+make install PREFIX=/usr DESTDIR=
 ```
 
-This copies `abstractions/tor` to `/etc/apparmor.d/abstractions/` and installs `sync-profiles` to `/usr/local/bin/`. It also removes a legacy `system_tor` entry if present.
-
-## Reload and Verify
-After installing or editing profiles, reload them and check logs:
+- Load installed profiles (requires `apparmor_parser`):
 
 ```sh
-sudo apparmor_parser -r \
-	/etc/apparmor.d/abstractions/tor \
-	/etc/apparmor.d/usr.sbin.tor \
-	/etc/apparmor.d/usr.bin.i2pd \
-	/etc/apparmor.d/usr.bin.monerod \
-	/etc/apparmor.d/usr.bin.radicale \
-	/etc/apparmor.d/usr.sbin.opendkim
-
-sudo journalctl -g apparmor -n 200 --no-pager
+make load
 ```
 
-## Sync Upstream Profiles
-`sync-profiles.pl` clones the upstream AppArmor repo and copies selected profiles (apache2, postfix, dovecot, spamc/spamd, clamav/clamd) into your `/etc/apparmor.d`, forcing `flags=(enforce,...)` and bringing required `abstractions/` and `tunables/`.
+- Syntax-check profiles (treats warnings as errors):
 
-Environment overrides:
-- `APPARMOR_REMOTE`: upstream repo URL (default: `https://gitlab.com/apparmor/apparmor.git`)
-- `APPARMOR_TARGET`: target directory (default: `/etc/apparmor.d`)
-
-Run:
 ```sh
-sudo /usr/local/bin/sync-profiles
+make check
 ```
 
-## Troubleshooting
-- If a service fails under enforce, temporarily switch to complain to gather logs:
+- Remove files installed by this repository:
+
 ```sh
-sudo aa-complain /etc/apparmor.d/usr.sbin.tor
-sudo journalctl -g apparmor -n 200 --no-pager
+make uninstall
 ```
-- Add site-local adjustments in `local/<profile_name>` includes, keeping the base profiles minimal.
+
+- Show Makefile help:
+
+```sh
+make help
+```
+
+Important variables
+- `PREFIX`: installation prefix (default: `/usr`).
+- `DESTDIR`: temporary installation root for packaging.
+- `BINDIR`: helper script destination (default: `$(DESTDIR)$(PREFIX)/usr/local/bin`).
+- `APPARMOR_PARSER`: path to `apparmor_parser` (required for `make load` and `make check`).
+
+What `make install` does
+- Creates `$(DESTDIR)$(PREFIX)/etc/apparmor.d/abstractions/` and copies `abstractions/tor`.
+- Copies the listed profiles into `$(DESTDIR)$(PREFIX)/etc/apparmor.d/`.
+- Creates empty stub files in `$(DESTDIR)$(PREFIX)/etc/apparmor.d/local/` for each profile (if missing).
+- Installs `sync-profiles` and `enforce-complain-toggle` into `$(BINDIR)`.
+
+Notes
+- `make load` invokes `apparmor_parser` with the configured flags; it will error if the parser is not installed.
+- Use `local/<profile>` to add site-specific adjustments without modifying upstream profiles.
+- To debug denials, switch a profile to `complain` (e.g. `sudo aa-complain /etc/apparmor.d/usr.sbin.tor`) and check `journalctl -g apparmor`.
+
+Contributing
+- Report issues or submit patches via pull requests.
+
+License
+- See the `LICENSE` file in this directory for licensing terms.
