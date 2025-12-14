@@ -1,0 +1,57 @@
+# Monero daemon: strict confinement with required network, TLS trust, and
+# storage paths for blockchain data. Keep writes limited to data/log/PID dirs.
+#
+# See the LICENSE file at the top of the project tree for copyright
+# and license details.
+
+abi <abi/4.0>,
+
+include <tunables/global>
+profile monerod /{usr/,}bin/monerod flags=(enforce,attach_disconnected,mediate_deleted) {
+
+  include <abstractions/base>
+  include <abstractions/nameservice>
+  include <abstractions/ssl_certs>
+
+  capability setgid,
+  capability setuid,
+  capability net_bind_service,
+
+  # Full IPv4/IPv6 P2P/RPC sockets.
+  network inet stream,
+  network inet6 stream,
+  network inet tcp,
+  network inet6 tcp,
+  network inet udp,
+  network inet6 udp,
+
+  # Block unexpected shells/debuggers from the service context.
+  deny /bin/dash x,
+  deny /{usr/,}bin/gdb x,
+  deny ptrace (readby,trace),
+
+  /mnt/ssd/monero/ r,
+  /mnt/ssd/monero/** rwk,
+  owner @{HOME}/.bitmonero/ r,
+  owner @{HOME}/.bitmonero/** rwk,
+
+  /var/log/monero/ r,
+  /var/log/monero/* rw,
+  /var/log/monero/*.log rw,
+  /var/log/monero/** rw,
+
+  /dev/urandom r,
+  /dev/null rw,
+
+  /{usr/,}lib/** mr,
+
+  /{usr/,}bin/monerod Px,
+
+  # Optional runtime PID/state locations.
+  /{,var/}run/monerod.pid rwk,
+  /{,var/}run/monero/ rwk,
+
+  /etc/monerod.conf r,
+
+  include if exists <local/usr.bin.monerod>
+}

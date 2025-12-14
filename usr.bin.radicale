@@ -1,0 +1,57 @@
+# Radicale CalDAV/CardDAV server: enforce mode with constrained exec, TLS trust,
+# and limited secrets access. Deny build tools to reduce RCE post-exploitation.
+#
+# See the LICENSE file at the top of the project tree for copyright
+# and license details.
+
+abi <abi/4.0>,
+
+include <tunables/global>
+profile radicale /{usr/,}bin/radicale flags=(enforce,attach_disconnected,mediate_deleted) {
+
+  include <abstractions/base>
+  include <abstractions/nameservice>
+  include <abstractions/python>
+  include <abstractions/ssl_certs>
+  include <abstractions/user-tmp>
+
+  deny ptrace (readby,trace),
+
+  capability chown,
+  capability dac_override,
+  capability setgid,
+  capability setuid,
+
+  # HTTP(S) listener with IPv4/IPv6.
+  network inet stream,
+  network inet6 stream,
+
+  deny /{usr/,}bin/aarch64-linux-gnu-gcc-14 x,
+  deny /{usr/,}bin/aarch64-linux-gnu-ld.bfd x,
+  deny /{usr/,}sbin/ldconfig x,
+  deny /bin/dash x,
+  deny /{usr/,}bin/gdb x,
+  deny ptrace (readby,trace),
+
+  /dev/null rwk,
+  /etc/letsencrypt/live/** r,
+  /etc/radicale/** r,
+  /etc/radicale/rights r,
+  /etc/radicale/users r,
+  /etc/ssl/certs/** r,
+  /etc/ssl/openssl.cnf r,
+  /etc/ssl/private/** r,
+  /proc/** r,
+  /{,var/}run/radicale.sock rw,
+  /{,var/}run/radicale/** rw,
+  /{usr/,}bin/ r,
+  /{usr/,}bin/** r,
+  /{usr/,}bin/python3 px,
+  /{usr/,}bin/radicale mr,
+  /{usr/,}bin/radicale px,
+  /{usr/,}lib/python*/** px,
+  /var/lib/radicale/collections/** rwk,
+  /var/log/radicale/** rw,
+
+  include if exists <local/usr.bin.radicale>
+}

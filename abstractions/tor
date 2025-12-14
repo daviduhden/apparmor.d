@@ -1,0 +1,49 @@
+# Tor common abstraction
+# Shared permissions for tor daemon and transport helpers. Keep minimal while
+# covering IPv4/IPv6, crypto seeds, and pluggable transports shipped by Tor.
+# This abstraction is meant to be included by service profiles (tor and
+# derivatives) and by helper transports. Avoid adding writable paths here.
+#
+# See the LICENSE file at the top of the project tree for copyright
+# and license details.
+
+  include <abstractions/base>
+  include <abstractions/nameservice>
+
+  # Network for relays/clients over both families (TCP and UDP control).
+  network inet stream,
+  network inet6 stream,
+  network inet udp,
+  network inet6 udp,
+
+  # Capabilities derived from upstream/debian tor profiles; drop anything else
+  # into the including profile rather than here.
+  capability chown,
+  capability dac_read_search,
+  capability fowner,
+  capability fsetid,
+  capability setgid,
+  capability setuid,
+
+  deny ptrace (readby,trace),
+
+  /dev/null rw,
+  /dev/random r,
+  /dev/urandom r,
+
+  /{usr/,}bin/tor r,
+  /{usr/,}sbin/tor r,
+
+  /proc/sys/net/core/somaxconn r,
+  /proc/sys/kernel/random/uuid r,
+  /sys/devices/system/cpu/ r,
+  /sys/devices/system/cpu/** r,
+
+  /etc/tor/** r,
+  /{usr/,}share/tor/** r,
+
+  # Pluggable transport helpers shipped with Tor.
+  /{usr/,}bin/obfsproxy PUx,
+  /{usr/,}bin/obfs4proxy Pix,
+  /{usr/,}bin/snowflake-client Pix,
+  /{usr/,}bin/snowflake-server Pix,
