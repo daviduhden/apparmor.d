@@ -1,4 +1,4 @@
-#!/usr/bin/env perl
+#!/usr/bin/perl
 
 # AppArmor enforce-complain toggle script
 # Saves the list of profiles currently in enforce mode to a state file,
