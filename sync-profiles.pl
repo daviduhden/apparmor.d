@@ -109,6 +109,7 @@ sub run {
     }
 
     copy_deps($checkout);
+    ensure_exec_tunable();
 }
 
 sub slurp {
@@ -220,4 +221,28 @@ sub copy_deps {
         write_file($dest, $data);
         log_info("Updated $rel");
     }
+}
+
+sub ensure_exec_tunable {
+    # Ensure a tunables/exec file defining @{exec_path} exists at target_root
+    my $dest = File::Spec->catfile($target_root, 'tunables', 'exec');
+
+    my $needs_write = 1;
+    if (-f $dest) {
+        my $existing = slurp($dest);
+        $needs_write = ($existing !~ /\@\{exec_path\}/);
+    }
+
+    return unless $needs_write;
+
+    make_path(dirname($dest)) unless -d dirname($dest);
+    my $content = <<'EOF';
+# AppArmor tunable: exec_path for postfix multi-call binaries
+# Adjust locally if your distribution uses different paths.
+
+@{exec_path}=/usr/lib{,exec}/postfix/{,bin/,sbin/}
+EOF
+
+    write_file($dest, $content);
+    log_info('Ensured tunables/exec with @{exec_path}');
 }
