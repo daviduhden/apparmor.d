@@ -25,8 +25,6 @@
   capability setgid,
   capability setuid,
 
-  deny ptrace (readby,trace),
-
   /dev/null rw,
   /dev/random r,
   /dev/urandom r,
