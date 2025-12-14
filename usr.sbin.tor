@@ -1,0 +1,42 @@
+# Tor daemon confinement: limit to tor runtime state, TLS trust store, and
+# pluggable transports. Hardened with IPv6 support, explicit runtime dirs, and
+# gdb/shell denial to reduce lateral movement from the service context.
+# See the LICENSE file at the top of the project tree for copyright
+# and license details.
+
+abi <abi/4.0>,
+
+include <tunables/global>
+profile tor /{usr/,}sbin/tor flags=(enforce,attach_disconnected,mediate_deleted) {
+
+  include <abstractions/base>
+  include <abstractions/nameservice>
+  include <abstractions/ssl_certs>
+  include <abstractions/tor>
+
+  deny /{usr/,}bin/aarch64-linux-gnu-gcc-14 x,
+  deny /{usr/,}bin/aarch64-linux-gnu-ld.bfd x,
+  deny /{usr/,}sbin/ldconfig x,
+  deny /bin/dash x,
+  deny /{usr/,}bin/gdb x,
+  deny ptrace (readby,trace),
+
+  /dev/null rw,
+  /dev/random r,
+  /dev/urandom r,
+
+  # Tor state and log ownership.
+  owner /var/lib/tor/ r,
+  owner /var/lib/tor/** rwk,
+  owner /var/log/tor/* w,
+  owner /var/log/tor/** w,
+
+  # Runtime sockets/PIDs; allow either /run or /var/run layouts.
+  /{,var/}run/tor/ r,
+  /{,var/}run/tor/** rwk,
+  /{,var/}run/systemd/notify w,
+
+  /etc/tor/** r,
+
+  include <local/system_tor>
+}

@@ -1,0 +1,66 @@
+# OpenDKIM signing daemon: tightened profile with explicit includes and restricted
+# sockets/storage. Covers IPv4/IPv6 listeners and DNSSEC trust file only.
+#
+# See the LICENSE file at the top of the project tree for copyright
+# and license details.
+
+abi <abi/4.0>,
+
+include <tunables/global>
+profile opendkim /{usr/,}sbin/opendkim flags=(enforce,attach_disconnected,mediate_deleted) {
+
+  include <abstractions/base>
+  include <abstractions/nameservice>
+  include <abstractions/ssl_certs>
+
+  deny /{usr/,}bin/aarch64-linux-gnu-gcc-14 x,
+  deny /{usr/,}bin/aarch64-linux-gnu-ld.bfd x,
+  deny /{usr/,}sbin/ldconfig x,
+  deny /bin/dash x,
+  deny /{usr/,}bin/gdb x,
+  deny ptrace (readby,trace),
+
+  /etc/opendkim.conf r,
+  /etc/default/opendkim r,
+
+  /{,var/}run/opendkim/opendkim.sock rw,
+  /var/spool/postfix/opendkim.sock rw,
+  /{,var/}run/opendkim/opendkim.pid rw,
+
+  /{,var/}run/opendkim/** rw,
+  /var/lib/opendkim/** rw,
+
+  /etc/postfix/dkim/ r,
+  /etc/postfix/dkim/** r,
+  /etc/postfix/dkim/keytable r,
+  /etc/postfix/dkim/signingtable r,
+  /etc/postfix/dkim/trustedhosts r,
+
+  /{usr/,}share/dns/root.key r,
+
+  /var/log/mail.* rw,
+  /var/log/opendkim/** rw,
+  /var/log/mail/ rw,
+  /var/log/mail/** rw,
+
+  # DKIM listener sockets (IPv4/IPv6 TCP + syslog UDP).
+  network inet stream,
+  network inet6 stream,
+  network inet dgram,
+  network inet6 dgram,
+
+  capability setgid,
+  capability setuid,
+  capability chown,
+  capability dac_override,
+  capability dac_read_search,
+
+  deny ptrace (readby,trace),
+
+  /etc/ssl/openssl.cnf r,
+
+  /{usr/,}sbin/opendkim px,
+  /{usr/,}lib/** mr,
+
+  include if exists <local/usr.sbin.opendkim>
+}

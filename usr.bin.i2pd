@@ -1,0 +1,43 @@
+# I2Pd router: confine network daemon to its own state, logs, and helper data,
+# permitting only the transports and trust store it needs. IPv4/IPv6 ready.
+#
+# See the LICENSE file at the top of the project tree for copyright
+# and license details.
+
+abi <abi/4.0>,
+
+include <tunables/global>
+profile i2pd /{usr/,}bin/i2pd flags=(enforce,attach_disconnected,mediate_deleted) {
+
+  include <abstractions/base>
+  include <abstractions/openssl>
+  include <abstractions/nameservice>
+  include <abstractions/ssl_certs>
+
+  # Allow IPv4/IPv6 TCP+UDP transports.
+  network inet stream,
+  network inet6 stream,
+  network inet udp,
+  network inet6 udp,
+
+  deny /{usr/,}bin/aarch64-linux-gnu-gcc-14 x,
+  deny /{usr/,}bin/aarch64-linux-gnu-ld.bfd x,
+  deny /{usr/,}sbin/ldconfig x,
+  deny /bin/dash x,
+  deny /{usr/,}bin/gdb x,
+  deny ptrace (readby,trace),
+
+  /etc/i2pd/** r,
+
+  # State/logs may live under system dirs or user homedir when run manually.
+  /var/lib/i2pd/** rwk,
+  /var/log/i2pd/i2pd.log w,
+  /{,var/}run/i2pd/** rwk,
+  /{usr/,}bin/i2pd Px,
+  @{system_share_dirs}/i2pd/** r,
+
+  owner @{HOME}/.i2pd/   rw,
+  owner @{HOME}/.i2pd/** rwk,
+
+  include if exists <local/usr.bin.i2pd>
+}
