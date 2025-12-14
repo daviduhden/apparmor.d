@@ -27,12 +27,12 @@ my $CYAN = "\e[36m";
 my $BOLD = "\e[1m";
 my $RESET = "\e[0m";
 
-sub log {
+sub log_info {
     my ($msg) = @_;
     print "${GREEN}✅ [INFO]${RESET} $msg\n";
 }
 
-sub warn {
+sub warn_info {
     my ($msg) = @_;
     print STDERR "${YELLOW}⚠️  [WARN]${RESET} $msg\n";
 }
@@ -45,8 +45,8 @@ sub error {
 }
 
 # Backward-compatible aliases
-sub info     { log(@_); }
-sub warn_msg { warn(@_); }
+sub info     { log_info(@_); }
+sub warn_msg { warn_info(@_); }
 
 # Copy upstream profiles for apache2, postfix, dovecot, spamc/spamd, and clamav/clamd
 # from the AppArmor repository into this tree and ensure they use enforce mode.
@@ -63,6 +63,7 @@ my @abstractions = (
     qr{<abstractions/dovecot-common>},
 );
 my %deps;
+my %exclude;
 
 my $target_root = abs_path($ENV{APPARMOR_TARGET} // '/etc/apparmor.d');
 
@@ -107,7 +108,7 @@ sub run {
 
         make_path(dirname($dest)) unless -d dirname($dest);
         write_file($dest, $data);
-        log("Updated $relative");
+        log_info("Updated $relative");
     }
 
     copy_deps($checkout);
@@ -179,6 +180,6 @@ sub copy_deps {
         make_path(dirname($dest)) unless -d dirname($dest);
         my $data = slurp($source);
         write_file($dest, $data);
-        log("Updated $rel");
+        log_info("Updated $rel");
     }
 }
