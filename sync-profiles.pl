@@ -164,19 +164,28 @@ sub ensure_enforce {
 sub ensure_exec_var {
     my ($text) = @_;
 
-    return $text unless $text =~ /\@\{exec_path\}/;             # nothing to do
-    return $text if $text =~ /^\s*\@\{exec_path\}\s*=/m;       # already defined
+    # If profile references @{exec_path}, ensure it includes tunables/exec,
+    # and remove any inline variable definitions from the profile.
+    return $text unless $text =~ /\@\{exec_path\}/;
 
-    my @lines = split /\n/, $text, -1; # keep trailing newline shape
-    my $insert_at = 0;
+    # Drop any inline definitions of exec_path in the profile
+    $text =~ s/^\s*\@\{exec_path\}\s*=.*\n//mg;
 
-    # Skip shebang, comments, and blank lines at the top to keep context tidy.
-    while ($insert_at < @lines && $lines[$insert_at] =~ /^(?:\s*#|\s*$)/) {
-        $insert_at++;
+    # Ensure include <tunables/exec> is present
+    if ($text !~ /include\s+<tunables\/exec>/) {
+        my @lines = split /\n/, $text, -1;
+        my $insert_at = 0;
+        # Insert after the first include <tunables/global> if present; else at top after comments
+        for my $i (0..$#lines) {
+            if ($lines[$i] =~ /include\s+<tunables\/global>/) { $insert_at = $i + 1; last; }
+            last if $lines[$i] =~ /^\s*profile\b/; # don't go past header
+            $insert_at = $i + 1 if $lines[$i] =~ /^\s*#/ || $lines[$i] =~ /^\s*$/;
+        }
+        splice @lines, $insert_at, 0, 'include <tunables/exec>';
+        $text = join("\n", @lines);
     }
 
-    splice @lines, $insert_at, 0, '@{exec_path}=/usr/lib{,exec}/postfix/{,bin/,sbin/}';
-    return join("\n", @lines);
+    return $text;
 }
 
 sub file_matches_abstraction {
