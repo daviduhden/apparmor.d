@@ -105,6 +105,7 @@ sub run {
         my $raw = slurp($source);
         collect_deps($raw);
         my $data = ensure_enforce($raw);
+        $data = ensure_exec_var($data);
 
         make_path(dirname($dest)) unless -d dirname($dest);
         write_file($dest, $data);
@@ -112,6 +113,7 @@ sub run {
     }
 
     copy_deps($checkout);
+    ensure_exec_tunable();
 }
 
 sub slurp {
@@ -161,6 +163,24 @@ sub ensure_enforce {
         $line = $header . $flag_text . ' ' . $after;
     }
 
+    return join("\n", @lines);
+}
+
+sub ensure_exec_var {
+    my ($text) = @_;
+
+    return $text unless $text =~ /\@\{exec_path\}/;             # nothing to do
+    return $text if $text =~ /^\s*\@\{exec_path\}\s*=/m;       # already defined
+
+    my @lines = split /\n/, $text, -1; # keep trailing newline shape
+    my $insert_at = 0;
+
+    # Skip shebang, comments, and blank lines at the top to keep context tidy.
+    while ($insert_at < @lines && $lines[$insert_at] =~ /^(?:\s*#|\s*$)/) {
+        $insert_at++;
+    }
+
+    splice @lines, $insert_at, 0, '@{exec_path}=/usr/lib{,exec}/postfix/{,bin/,sbin/}';
     return join("\n", @lines);
 }
 
