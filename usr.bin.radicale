@@ -26,13 +26,6 @@ profile radicale /{usr/,}bin/radicale flags=(enforce,attach_disconnected,mediate
   network inet stream,
   network inet6 stream,
 
-  deny /{usr/,}bin/aarch64-linux-gnu-gcc-14 x,
-  deny /{usr/,}bin/aarch64-linux-gnu-ld.bfd x,
-  deny /{usr/,}sbin/ldconfig x,
-  deny /bin/dash x,
-  deny /{usr/,}bin/gdb x,
-  deny ptrace (readby,trace),
-
   /dev/null rwk,
   /etc/letsencrypt/live/** r,
   /etc/radicale/** r,

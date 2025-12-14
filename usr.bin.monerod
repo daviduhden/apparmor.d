@@ -25,13 +25,9 @@ profile monerod /{usr/,}bin/monerod flags=(enforce,attach_disconnected,mediate_d
   network inet udp,
   network inet6 udp,
 
-  # Block unexpected shells/debuggers from the service context.
-  deny /bin/dash x,
-  deny /{usr/,}bin/gdb x,
-  deny ptrace (readby,trace),
-
   /mnt/ssd/monero/ r,
   /mnt/ssd/monero/** rwk,
+  /sys/devices/** r,
   owner @{HOME}/.bitmonero/ r,
   owner @{HOME}/.bitmonero/** rwk,
 

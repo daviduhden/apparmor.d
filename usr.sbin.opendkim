@@ -13,13 +13,6 @@ profile opendkim /{usr/,}sbin/opendkim flags=(enforce,attach_disconnected,mediat
   include <abstractions/nameservice>
   include <abstractions/ssl_certs>
 
-  deny /{usr/,}bin/aarch64-linux-gnu-gcc-14 x,
-  deny /{usr/,}bin/aarch64-linux-gnu-ld.bfd x,
-  deny /{usr/,}sbin/ldconfig x,
-  deny /bin/dash x,
-  deny /{usr/,}bin/gdb x,
-  deny ptrace (readby,trace),
-
   /etc/opendkim.conf r,
   /etc/default/opendkim r,
 

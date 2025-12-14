@@ -20,13 +20,6 @@ profile i2pd /{usr/,}bin/i2pd flags=(enforce,attach_disconnected,mediate_deleted
   network inet udp,
   network inet6 udp,
 
-  deny /{usr/,}bin/aarch64-linux-gnu-gcc-14 x,
-  deny /{usr/,}bin/aarch64-linux-gnu-ld.bfd x,
-  deny /{usr/,}sbin/ldconfig x,
-  deny /bin/dash x,
-  deny /{usr/,}bin/gdb x,
-  deny ptrace (readby,trace),
-
   /etc/i2pd/** r,
 
   # State/logs may live under system dirs or user homedir when run manually.

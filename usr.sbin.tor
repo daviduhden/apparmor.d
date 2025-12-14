@@ -14,13 +14,6 @@ profile tor /{usr/,}sbin/tor flags=(enforce,attach_disconnected,mediate_deleted)
   include <abstractions/ssl_certs>
   include <abstractions/tor>
 
-  deny /{usr/,}bin/aarch64-linux-gnu-gcc-14 x,
-  deny /{usr/,}bin/aarch64-linux-gnu-ld.bfd x,
-  deny /{usr/,}sbin/ldconfig x,
-  deny /bin/dash x,
-  deny /{usr/,}bin/gdb x,
-  deny ptrace (readby,trace),
-
   /dev/null rw,
   /dev/random r,
   /dev/urandom r,
