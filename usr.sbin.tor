@@ -38,5 +38,5 @@ profile tor /{usr/,}sbin/tor flags=(enforce,attach_disconnected,mediate_deleted)
 
   /etc/tor/** r,
 
-  include <local/usr.sbin.tor>
+  include if exists <local/usr.sbin.tor>
 }

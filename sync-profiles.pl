@@ -134,20 +134,34 @@ sub write_file {
 sub ensure_enforce {
     my ($text) = @_;
 
-    $text =~ s{(^\s*profile\s+[^\n\{]+?)           # profile header
-               (?:\s+flags=\(\s*([^)]+?)\s*\))?   # optional flags
-               (\s*\{)                               # opening brace
-              }{
-        my ($prefix, $flag_body, $brace) = ($1, $2 // '', $3);
+    my @lines = split /\n/, $text, -1; # keep trailing newline if present
+
+    for my $line (@lines) {
+        next unless $line =~ /^\s*profile\b/;
+        my $brace_pos = rindex($line, '{');
+        next if $brace_pos < 0; # malformed line; leave untouched
+
+        my $header = substr($line, 0, $brace_pos);
+        my $after  = substr($line, $brace_pos); # includes '{' and following spaces
+        $after =~ s/^\s*\{/{/; # normalize spacing before the brace
+
+        my $flag_body = '';
+        if ($header =~ s/\s+flags=\(\s*([^)]+?)\s*\)//) {
+            $flag_body = $1;
+        }
+
         my @flags = grep { length } map { s/^\s+|\s+$//gr } split /[,\s]+/, $flag_body;
         my %seen;
         @flags = grep { !$seen{$_}++ } @flags;
-        push @flags, 'enforce' unless grep { $_ eq 'enforce' } @flags;
-        my $flag_text = ' flags=(' . join(',', @flags) . ')';
-        "$prefix$flag_text$brace";
-    }xmge;
+        push @flags, 'enforce' unless $seen{'enforce'};
 
-    return $text;
+        my $flag_text = ' flags=(' . join(',', @flags) . ')';
+        $header =~ s/\s+$//; # trim trailing space before re-adding flags
+
+        $line = $header . $flag_text . ' ' . $after;
+    }
+
+    return join("\n", @lines);
 }
 
 sub file_matches_abstraction {
