@@ -21,7 +21,7 @@ PROFILES := usr.sbin.tor usr.bin.i2pd usr.bin.monerod usr.bin.radicale usr.sbin.
 PROFILE_NAMES := tor i2pd monerod radicale opendkim 
 INFO := ==> 
 
-.PHONY: install help unload-profiles load check uninstall
+.PHONY: install help unload-profiles load check uninstall install-scripts
 install:
 	@echo "$(INFO) Creating target directories: $(ABSTRACTIONS_DIR) $(BINDIR)"
 	install -d $(ABSTRACTIONS_DIR) $(BINDIR)
@@ -51,7 +51,17 @@ install:
 	@echo "$(INFO) Installing helper scripts..."
 	install -m 0755 scripts/sync-profiles.pl $(BINDIR)/sync-profiles
 	install -m 0755 scripts/enforce-complain-toggle.pl $(BINDIR)/enforce-complain-toggle
+	@echo "$(INFO) Scripts installed"
 	@echo "$(INFO) Install complete"
+
+.PHONY: install-scripts
+install-scripts:
+	@echo "$(INFO) Installing helper scripts..."
+	@install -d $(BINDIR)
+	@install -m 0755 scripts/sync-profiles.pl $(BINDIR)/sync-profiles
+	@install -m 0755 scripts/enforce-complain-toggle.pl $(BINDIR)/enforce-complain-toggle
+	@install -m 0755 scripts/merge-dupe-rules.pl $(BINDIR)/merge-dupe-rules
+	@echo "$(INFO) Scripts installed"
 
 
 .PHONY: help
