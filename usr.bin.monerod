@@ -1,23 +1,27 @@
-# Monero daemon: strict confinement with required network, TLS trust, and
-# storage paths for blockchain data. Keep writes limited to data/log/PID dirs.
+# Monero daemon profile
+# Purpose: confine the `monerod` daemon with explicit network, data,
+# and log access. Keep writable paths limited to blockchain storage and
+# runtime state to reduce risk and attack surface.
 #
 # See the LICENSE file at the top of the project tree for copyright
 # and license details.
 
+# ABI and global tunables
 abi <abi/4.0>,
-
 include <tunables/global>
-profile monerod /{usr/,}bin/monerod flags=(enforce,attach_disconnected,mediate_deleted) {
 
+# Profile definition
+profile monerod /{usr/,}bin/monerod flags=(attach_disconnected, enforce, mediate_deleted) {
+
+  # Standard abstractions
   include <abstractions/base>
   include <abstractions/nameservice>
   include <abstractions/ssl_certs>
 
+  # Capabilities & network
   capability setgid,
   capability setuid,
   capability net_bind_service,
-
-  # Full IPv4/IPv6 P2P/RPC sockets.
   network inet stream,
   network inet6 stream,
   network inet tcp,
@@ -25,29 +29,36 @@ profile monerod /{usr/,}bin/monerod flags=(enforce,attach_disconnected,mediate_d
   network inet udp,
   network inet6 udp,
 
-  /var/lib/monero r,
-  /var/lib/monero/** rwk,
+  # Blockchain storage and mounts 
+  /mnt/ssd/monero/ r,
+  /mnt/ssd/monero/** rwk,
+
+  # System and user runtime data
   /sys/devices/** r,
   owner @{HOME}/.bitmonero/ r,
   owner @{HOME}/.bitmonero/** rwk,
 
+  # Logging and devices 
   /var/log/monero/ r,
   /var/log/monero/* rw,
   /var/log/monero/*.log rw,
   /var/log/monero/** rw,
-
   /dev/urandom r,
   /dev/null rw,
 
+  # Libraries and executable
   /{usr/,}lib/** mr,
-
   /{usr/,}bin/monerod Px,
 
-  # Optional runtime PID/state locations.
+  # PID and runtime directories 
   /{,var/}run/monerod.pid rwk,
   /{,var/}run/monero/ rwk,
 
+  # Configuration
   /etc/monerod.conf r,
 
+  # Local overrides
   include if exists <local/usr.bin.monerod>
+
 }
+
