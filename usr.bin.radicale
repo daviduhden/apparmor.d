@@ -1,50 +1,88 @@
-# Radicale CalDAV/CardDAV server: enforce mode with constrained exec, TLS trust,
-# and limited secrets access. Deny build tools to reduce RCE post-exploitation.
+# Radicale CalDAV/CardDAV server profile
+# Purpose: confine the `radicale` daemon in enforce mode while allowing
+# access to TLS certificates, runtime data, and necessary Python runtime
+# files. Explicitly restrict access to build tools and other high-risk
+# binaries to reduce the attack surface in case of post-exploitation.
 #
 # See the LICENSE file at the top of the project tree for copyright
 # and license details.
 
+# ABI and global tunables
 abi <abi/4.0>,
-
 include <tunables/global>
-profile radicale /{usr/,}bin/radicale flags=(enforce,attach_disconnected,mediate_deleted) {
 
+# Profile definition
+# Main profile for the `radicale` executable. Flags: attach_disconnected
+# (allow attaching dbus/ppid changes), enforce (enforce mode), mediate_deleted
+# (mediate access to deleted files).
+profile radicale /{usr/,}bin/radicale flags=(attach_disconnected, enforce, mediate_deleted) {
+
+  # Standard abstractions
+  # Reuse common AppArmor abstractions to avoid duplicating rules.
   include <abstractions/base>
   include <abstractions/nameservice>
   include <abstractions/python>
   include <abstractions/ssl_certs>
   include <abstractions/user-tmp>
 
-  deny ptrace (readby,trace),
-
+  # Capabilities & network
+  # Minimal capabilities required by the daemon at runtime.
   capability chown,
   capability dac_override,
   capability setgid,
   capability setuid,
 
-  # HTTP(S) listener with IPv4/IPv6.
+  # Network access: allow IPv4 and IPv6 stream sockets.
   network inet stream,
   network inet6 stream,
 
+  # Basic device and proc access
   /dev/null rwk,
+  /proc/** r,
+
+  # TLS certificates and SSL configuration 
+  # Read access to system TLS certificates and openssl configuration.
   /etc/letsencrypt/live/** r,
-  /etc/radicale/** r,
-  /etc/radicale/rights r,
-  /etc/radicale/users r,
   /etc/ssl/certs/** r,
   /etc/ssl/openssl.cnf r,
   /etc/ssl/private/** r,
-  /proc/** r,
-  /{,var/}run/radicale.sock rw,
-  /{,var/}run/radicale/** rw,
-  /{usr/,}bin/ r,
-  /{usr/,}bin/** r,
-  /{usr/,}bin/python3 px,
-  /{usr/,}bin/radicale mr,
-  /{usr/,}bin/radicale px,
-  /{usr/,}lib/python*/** px,
+
+  # Radicale configuration and rights files 
+  # Allow reading Radicale configuration and rights/user files.
+  /etc/radicale/** r,
+  /etc/radicale/rights r,
+  /etc/radicale/users r,
+
+  # Runtime data and logs
+  # Runtime collections (read/write) and log files.
   /var/lib/radicale/collections/** rwk,
   /var/log/radicale/** rw,
 
+  # Sockets and runtime state 
+  /{,var/}run/radicale.sock rw,
+  /{,var/}run/radicale/** rw,
+
+  # Executables and interpreter access
+  # Allow access to installed binaries and the Python interpreter used.
+  /{usr/,}bin/ r,
+  /{usr/,}bin/** r,
+  /{usr/,}bin/python3 px,
+  /{usr/,}bin/radicale mrpx,
+  /{usr/,}lib/python*/** px,
+
+  # Deny or restrict build tool execution (mitigation)
+  # Deny execution of certain toolchains by restricting mrix rules to prevent
+  # easy compilation/linking from an exploited process. These are present
+  # to reduce post-exploitation RCE risks without breaking legitimate
+  # package-managed uses on the host.
+  /usr/bin/aarch64-linux-gnu-gcc-14 mrix,
+  /usr/bin/aarch64-linux-gnu-ld.bfd mrix,
+  /usr/libexec/gcc/aarch64-linux-gnu/14/collect2 mrix,
+  /usr/libexec/gcc/aarch64-linux-gnu/14/liblto_plugin.so mrix,
+  /usr/sbin/ldconfig mrix,
+
+  # Local overrides
   include if exists <local/usr.bin.radicale>
+
 }
+

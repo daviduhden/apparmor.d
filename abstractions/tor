@@ -1,23 +1,26 @@
 # Tor common abstraction
-# Shared permissions for tor daemon and transport helpers. Keep minimal while
-# covering IPv4/IPv6, crypto seeds, and pluggable transports shipped by Tor.
-# This abstraction is meant to be included by service profiles (tor and
-# derivatives) and by helper transports. Avoid adding writable paths here.
+# Purpose: shared permissions for the `tor` daemon and its transport
+# helpers. Keep this abstraction minimal and read-only where possible.
+# This file is included by service profiles (e.g., `tor`) and by helper
+# transports. Avoid placing writable paths here; leave per-service writable
+# directories to the main profile.
 #
 # See the LICENSE file at the top of the project tree for copyright
 # and license details.
 
+  # Standard includes 
   include <abstractions/base>
   include <abstractions/nameservice>
 
-  # Network for relays/clients over both families (TCP and UDP control).
+  # Network transports
+  # Allow IPv4/IPv6 stream and UDP transports used by Tor and transports.
   network inet stream,
   network inet6 stream,
   network inet udp,
   network inet6 udp,
 
-  # Capabilities derived from upstream/debian tor profiles; drop anything else
-  # into the including profile rather than here.
+  # Capabilities 
+  # Minimal capabilities that helper processes or the daemon may require.
   capability chown,
   capability dac_read_search,
   capability fowner,
@@ -25,23 +28,29 @@
   capability setgid,
   capability setuid,
 
+  # Randomness and devices 
   /dev/null rw,
   /dev/random r,
   /dev/urandom r,
 
+  # Tor binaries and shared data 
   /{usr/,}bin/tor r,
   /{usr/,}sbin/tor r,
+  /{usr/,}share/tor/** r,
 
+  # System tunables and hardware info
   /proc/sys/net/core/somaxconn r,
   /proc/sys/kernel/random/uuid r,
   /sys/devices/system/cpu/ r,
   /sys/devices/system/cpu/** r,
 
+  # Configuration
   /etc/tor/** r,
-  /{usr/,}share/tor/** r,
 
-  # Pluggable transport helpers shipped with Tor.
+  # Pluggable transports (binaries)
+  # Allow execution of bundled pluggable transport helpers where present.
   /{usr/,}bin/obfsproxy PUx,
   /{usr/,}bin/obfs4proxy Pix,
   /{usr/,}bin/snowflake-client Pix,
   /{usr/,}bin/snowflake-server Pix,
+

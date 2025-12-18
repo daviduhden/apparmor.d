@@ -1,36 +1,45 @@
-# I2Pd router: confine network daemon to its own state, logs, and helper data,
-# permitting only the transports and trust store it needs. IPv4/IPv6 ready.
+# I2Pd router profile
+# Purpose: confine the `i2pd` network daemon, restrict filesystem access to
+# its runtime state, logs, and configuration, and allow required transports.
 #
 # See the LICENSE file at the top of the project tree for copyright
 # and license details.
 
+# ABI and global tunables
 abi <abi/4.0>,
-
 include <tunables/global>
-profile i2pd /{usr/,}bin/i2pd flags=(enforce,attach_disconnected,mediate_deleted) {
 
+# Profile definition
+profile i2pd /{usr/,}bin/i2pd flags=(attach_disconnected, enforce, mediate_deleted) {
+
+  # Standard abstractions
   include <abstractions/base>
   include <abstractions/openssl>
   include <abstractions/nameservice>
   include <abstractions/ssl_certs>
 
-  # Allow IPv4/IPv6 TCP+UDP transports.
+  # Network access 
+  # Allow IPv4/IPv6 stream and UDP transports used by I2P.
   network inet stream,
   network inet6 stream,
   network inet udp,
   network inet6 udp,
 
+  # Configuration and runtime data
   /etc/i2pd/** r,
+  @{system_share_dirs}/i2pd/** r,
 
-  # State/logs may live under system dirs or user homedir when run manually.
+  # Persistent state and logs 
   /var/lib/i2pd/** rwk,
   /var/log/i2pd/i2pd.log w,
   /{,var/}run/i2pd/** rwk,
-  /{usr/,}bin/i2pd Px,
-  @{system_share_dirs}/i2pd/** r,
 
-  owner @{HOME}/.i2pd/   rw,
+  # Executable and runtime owner dirs 
+  /{usr/,}bin/i2pd Px,
+  owner @{HOME}/.i2pd/ rw,
   owner @{HOME}/.i2pd/** rwk,
 
+  # Local overrides
   include if exists <local/usr.bin.i2pd>
+
 }
