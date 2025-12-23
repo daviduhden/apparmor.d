@@ -262,13 +262,8 @@ sub ensure_enforce {
 sub ensure_exec_var {
     my ($text, $relative) = @_;
 
-    # Only act on profiles that *use* @{exec_path} somewhere.
-    return $text unless $text =~ /\@\{exec_path\}/;
-
-    # If the profile already *defines* @{exec_path}=, leave it alone.
-    return $text if $text =~ /^\s*\@\{exec_path\}\s*=.*$/m;
-
-    # Remove any stray definition lines just in case
+    # Remove any existing @{exec_path} definitions so we can set the
+    # canonical value for this profile.
     $text =~ s/^\s*\@\{exec_path\}\s*=.*\n//mg;
 
     my @lines = split /\n/, $text, -1;
@@ -278,49 +273,31 @@ sub ensure_exec_var {
         my ($name) = $relative =~ m{([^/]+)$};
         $name //= '';
 
-        # Find the first usage of the variable and search for paths that
-        # occur before the `{` that precedes that usage. Prefer the first
-        # absolute path found before that brace.
-        my $pos_use = index($text, '@{exec_path}');
-        if ($pos_use >= 0) {
-            my $before = substr($text, 0, $pos_use);
-            my $pos_brace = rindex($before, '{');
-            my $search_end = $pos_brace >= 0 ? $pos_brace : $pos_use;
-            $before = substr($text, 0, $search_end);
+        # Collect absolute path candidates in order of appearance.
+        my @candidates = ();
+        while ( $text =~ m{(/(?:usr/local/bin|usr/bin|usr/sbin|/usr/sbin|/bin|/sbin|/usr/libexec|/libexec)/[A-Za-z0-9._+\-]+)}g ) {
+            push @candidates, $1;
+        }
 
-            my @prefix_candidates = ();
-            while ( $before =~ m{(/(?:usr/local/bin|usr/bin|usr/sbin|/usr/sbin|/bin|/sbin|/usr/libexec|/libexec)/[A-Za-z0-9._+\-]+)}g ) {
-                push @prefix_candidates, $1;
-            }
-            if (@prefix_candidates) {
-                $binpath = $prefix_candidates[0];
+        # Prefer a candidate that matches the profile basename.
+        if (@candidates && $name) {
+            my ($base) = $name =~ m{([^\.]+)$};
+            for my $c (@candidates) {
+                if ($c =~ m{/$base(?:$|\b)}) { $binpath = $c; last }
             }
         }
 
-        # If none found before the brace, fall back to scanning the whole
-        # profile content and prefer a basename match, then first candidate.
-        if (!$binpath) {
-            my @candidates = ();
-            while ( $text =~ m{(/(?:usr/local/bin|usr/bin|usr/sbin|/usr/sbin|/bin|/sbin|/usr/libexec|/libexec)/[A-Za-z0-9._+\-]+)}g ) {
-                push @candidates, $1;
-            }
-            if (@candidates && $name) {
-                my ($base) = $name =~ m{([^\.]+)$};
-                for my $c (@candidates) {
-                    if ($c =~ m{/$base(?:$|\b)}) { $binpath = $c; last }
-                }
-            }
-            $binpath ||= $candidates[0] || '';
+        # If none matched basename, take the first candidate if any.
+        $binpath ||= $candidates[0] || '';
 
-            # final fallback: derive path from profile name (e.g. usr.bin.foo -> /usr/bin/foo)
-            if (!$binpath && $name) {
-                $binpath = '/' . ( $name =~ s/\./\//gr );
-            }
+        # Final fallback: derive path from profile file name (e.g. usr.bin.foo -> /usr/bin/foo)
+        if (!$binpath && $name) {
+            $binpath = '/' . ( $name =~ s/\./\//gr );
         }
     }
 
-    # Insert @{exec_path} definition immediately after the profile header
-    # (inside the profile) so the tunable is defined before any use.
+    # If we computed a binpath, insert it directly after the profile header
+    # so it's defined before any use in the body.
     if ($binpath) {
         my $insert_at = 0;
         for my $i (0..$#lines) {
