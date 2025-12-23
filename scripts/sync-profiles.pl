@@ -8,6 +8,13 @@
 #
 # See the LICENSE file at the top of the project tree for copyright
 # and license details.
+#
+# Usage:
+#   perl sync-profiles.pl [--abstractions-only] [--keywords=kw1,kw2,...] [--mode=enforce|complain]
+# Options:
+#   --abstractions-only : Only sync abstraction and abi files.
+#   --keywords         : Comma-separated list of keywords to filter profiles.
+#   --mode             : Set profiles to 'enforce' or 'complain' mode (default: enforce).
 
 use strict;
 use warnings;
@@ -70,7 +77,15 @@ my $keyword_list      = '';
 
 GetOptions(
     'abstractions-only|a' => \$abstractions_only,
+) or die_tool("Invalid options\n");
     'keywords|k=s'        => \$keyword_list,
+    'mode|m=s'            => \my $opt_mode,
+) or die_tool("Invalid options\n");
+
+my $mode = defined $opt_mode ? lc $opt_mode : 'enforce';
+if ($mode ne 'enforce' && $mode ne 'complain') {
+    die_tool("Invalid mode: $mode (must be 'enforce' or 'complain')\n");
+}
 ) or die_tool("Invalid options\n");
 
 if ( $keyword_list ) {
@@ -136,10 +151,10 @@ sub run {
         my $source = File::Spec->catfile( $root,        $relative );
         my $dest   = File::Spec->catfile( $target_root, $relative );
 
-        my $raw = slurp($source);
-        collect_deps($raw);
-        my $data = ensure_enforce($raw);
-        $data = ensure_exec_var($data);
+            my $raw = slurp($source);
+            collect_deps($raw);
+            my $data = ensure_enforce($raw, $relative);
+            $data = ensure_exec_var($data, $relative);
 
         make_path( dirname($dest) ) unless -d dirname($dest);
         write_file( $dest, $data );
@@ -168,18 +183,20 @@ sub write_file {
 }
 
 sub ensure_enforce {
-    my ($text) = @_;
+    my ($text, $relative) = @_;
+
+    my $wanted = $mode eq 'complain' ? 'complain' : 'enforce';
 
     my @lines = split /\n/, $text, -1;    # keep trailing newline if present
 
-    for my $line (@lines) {
+    for my $i (0..$#lines) {
+        my $line = $lines[$i];
         next unless $line =~ /^\s*profile\b/;
         my $brace_pos = rindex( $line, '{' );
         next if $brace_pos < 0;           # malformed line; leave untouched
 
         my $header = substr( $line, 0, $brace_pos );
-        my $after =
-          substr( $line, $brace_pos );    # includes '{' and following spaces
+        my $after = substr( $line, $brace_pos );    # includes '{' and following spaces
         $after =~ s/^\s*\{/{/;            # normalize spacing before the brace
 
         my $flag_body = '';
@@ -187,45 +204,114 @@ sub ensure_enforce {
             $flag_body = $1;
         }
 
-        my @flags = grep { length } map { s/^\s+|\s+$//gr } split /[,\s]+/,
-          $flag_body;
+        # extract the part after 'profile'
+        my $rest = $header;
+        $rest =~ s/^\s*profile\s*//;
+        $rest =~ s/\s+$//;
+
+        my $profile_name = '';
+        my $path_part = '';
+
+        if ( $rest =~ m{^(/|$)} ) {
+            # starts with path => no explicit name
+            $path_part = $rest;
+        } else {
+            # assume first token is name
+            if ( $rest =~ s/^([\w_.+-]+)\s*// ) {
+                $profile_name = $1;
+                $path_part = $rest;
+            } else {
+                $path_part = $rest;
+            }
+        }
+
+        # if no profile_name, derive from $relative
+        if (!$profile_name) {
+            if (defined $relative && $relative =~ m{([^/]+)$}) {
+                $profile_name = $1;
+                $profile_name =~ s/\./_/g;
+            }
+        }
+
+        # normalize flags, ensure wanted present and remove opposite
+        my @flags = grep { length } map { s/^\s+|\s+$//gr } split /[,\s]+/, $flag_body;
         my %seen;
         @flags = grep { !$seen{$_}++ } @flags;
-        push @flags, 'enforce' unless $seen{'enforce'};
+        # remove the other mode if present
+        if ($wanted eq 'enforce') {
+            @flags = grep { $_ ne 'complain' } @flags;
+        } else {
+            @flags = grep { $_ ne 'enforce' } @flags;
+        }
+        push @flags, $wanted unless $seen{$wanted};
 
-        my $flag_text = ' flags=(' . join( ',', @flags ) . ')';
-        $header =~ s/\s+$//;    # trim trailing space before re-adding flags
+        my $flag_text = @flags ? ' flags=(' . join( ',', @flags ) . ')' : '';
 
-        $line = $header . $flag_text . ' ' . $after;
+        $profile_name =~ s/\s+/_/g if defined $profile_name;
+
+        my $new_header = 'profile';
+        $new_header .= ' ' . $profile_name if $profile_name;
+        $new_header .= ' ' . $path_part if defined $path_part && $path_part ne '';
+        $new_header =~ s/\s+$//;
+
+        $lines[$i] = $new_header . $flag_text . ' ' . $after;
     }
 
     return join( "\n", @lines );
 }
 
 sub ensure_exec_var {
-    my ($text) = @_;
+    my ($text, $relative) = @_;
+    # If the profile already defines @{exec_path}, leave it alone.
+    return $text if $text =~ /\@\{exec_path\}/;
 
-    return $text unless $text =~ /\@\{exec_path\}/;
-
+    # Remove any explicit @{exec_path}= lines
     $text =~ s/^\s*\@\{exec_path\}\s*=.*\n//mg;
 
-    if ( $text !~ /include\s+<tunables\/exec>/ ) {
-        my @lines     = split /\n/, $text, -1;
-        my $insert_at = 0;
-        for my $i ( 0 .. $#lines ) {
-            if ( $lines[$i] =~ /include\s+<tunables\/global>/ ) {
-                $insert_at = $i + 1;
-                last;
-            }
-            last if $lines[$i] =~ /^\s*profile\b/;
-            $insert_at = $i + 1
-              if $lines[$i] =~ /^\s*#/ || $lines[$i] =~ /^\s*$/;
+    my @lines = split /\n/, $text, -1;
+
+    # Try to find an executable path inside the profile text first.
+    my $binpath = '';
+    if (defined $relative && length $relative) {
+        my ($name) = $relative =~ m{([^/]+)$};
+        $name //= '';
+
+        # search for explicit absolute paths in profile that look like binaries
+        my @candidates = ();
+        while ( $text =~ m{(/(?:usr/local/bin|usr/bin|usr/sbin|/usr/sbin|/bin|/sbin|/usr/libexec|/libexec)/[A-Za-z0-9._+\-]+)}g ) {
+            push @candidates, $1;
         }
-        splice @lines, $insert_at, 0, 'include <tunables/exec>';
-        $text = join( "\n", @lines );
+
+        # prefer a candidate that ends with the basename derived from the profile
+        if (@candidates && $name) {
+            my ($base) = $name =~ m{([^\.]+)$};
+            for my $c (@candidates) {
+                if ($c =~ m{/$base(?:$|\b)}) { $binpath = $c; last }
+            }
+        }
+
+        # fallback: if none matched, pick the first candidate
+        $binpath ||= $candidates[0] || '';
+
+        # final fallback: derive path from profile name (e.g. usr.bin.foo -> /usr/bin/foo)
+        if (!$binpath && $name) {
+            $binpath = '/' . ( $name =~ s/\./\//gr );
+        }
     }
 
-    return $text;
+    # If we have a reasonable binpath, insert a local @{exec_path} just
+    # before the first `profile` declaration in the file. Do NOT create or
+    # include `tunables/exec` — the tunable must be defined inside each
+    # profile file per policy.
+    if ($binpath) {
+        my $insert_at = 0;
+        for my $i (0..$#lines) {
+            if ( $lines[$i] =~ /^\s*profile\b/ ) { $insert_at = $i; last }
+        }
+        splice @lines, $insert_at, 0, "\@{exec_path}=$binpath";
+    }
+
+    return join("\n", @lines);
 }
 
 sub file_matches_abstraction {
@@ -264,24 +350,7 @@ sub copy_deps {
 }
 
 sub ensure_exec_tunable {
-    my $dest = File::Spec->catfile( $target_root, 'tunables', 'exec' );
-
-    my $needs_write = 1;
-    if ( -f $dest ) {
-        my $existing = slurp($dest);
-        $needs_write = ( $existing !~ /\@\{exec_path\}/ );
-    }
-
-    return unless $needs_write;
-
-    make_path( dirname($dest) ) unless -d dirname($dest);
-    my $content = <<'EOF';
-# AppArmor tunable: exec_path for postfix multi-call binaries
-# Adjust locally if your distribution uses different paths.
-
-@{exec_path}=/usr/lib{,exec}/postfix/{,bin/,sbin/}
-EOF
-
-    write_file( $dest, $content );
-    logi('Ensured tunables/exec with @{exec_path}');
+    # Per policy change, do not create a shared tunable. Each profile should
+    # define its own @{exec_path} locally. Keep this function a no-op.
+    return;
 }
