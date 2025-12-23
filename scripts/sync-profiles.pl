@@ -75,18 +75,17 @@ my $target_root = abs_path( $ENV{APPARMOR_TARGET} // '/etc/apparmor.d' );
 my $abstractions_only = 0;
 my $keyword_list      = '';
 
+my $opt_mode;
 GetOptions(
     'abstractions-only|a' => \$abstractions_only,
-) or die_tool("Invalid options\n");
     'keywords|k=s'        => \$keyword_list,
-    'mode|m=s'            => \my $opt_mode,
+    'mode|m=s'            => \$opt_mode,
 ) or die_tool("Invalid options\n");
 
 my $mode = defined $opt_mode ? lc $opt_mode : 'enforce';
 if ($mode ne 'enforce' && $mode ne 'complain') {
     die_tool("Invalid mode: $mode (must be 'enforce' or 'complain')\n");
 }
-) or die_tool("Invalid options\n");
 
 if ( $keyword_list ) {
     my @k = split /,\s*/, $keyword_list;
