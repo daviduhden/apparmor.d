@@ -11,7 +11,7 @@ PREFIX ?= /usr
 DESTDIR ?=
 INSTALL ?= install
 APPARMOR_DIR ?= $(DESTDIR)$(PREFIX)/etc/apparmor.d
-BINDIR ?= $(DESTDIR)$(PREFIX)/usr/local/bin
+BINDIR ?= $(DESTDIR)/usr/local/bin
 APPARMOR_PARSER ?= apparmor_parser
 APPARMOR_FLAGS ?= -r -T -W
 APPARMOR_CHECK_FLAGS ?= -T -W -K
@@ -72,8 +72,7 @@ install:
 	@echo "$(INFO) Scripts installed"
 	@echo "$(INFO) Install complete"
 
-.PHONY: install-scripts
-	install-scripts:
+install-scripts:
 	@echo "$(INFO) Installing helper scripts..."
 	@install -d $(BINDIR)
 	@for s in $(SCRIPTS); do \
@@ -89,7 +88,6 @@ install:
 	@echo "$(INFO) Scripts installed"
 
 
-.PHONY: help
 help:
 	@echo "$(INFO) Usage: make [target] [VARIABLE=value]"
 	@echo ""
@@ -108,15 +106,13 @@ help:
 
 
 
-.PHONY: unload-profiles
 unload-profiles:
 	@for name in $(PROFILE_NAMES); do \
 		$(APPARMOR_PARSER) -R $$name >/dev/null 2>&1 || true; \
 	done
 
 
-.PHONY: uninstall
-	uninstall:
+uninstall:
 	@echo "$(INFO) Removing helper scripts from $(BINDIR)"
 	@for s in $(SCRIPTS); do \
 		name=$$(basename $$s .pl); \
@@ -138,7 +134,6 @@ unload-profiles:
 	-rmdir --ignore-fail-on-non-empty $(APPARMOR_DIR)/local 2>/dev/null || true
 	-rmdir --ignore-fail-on-non-empty $(ABSTRACTIONS_DIR) 2>/dev/null || true
 
-.PHONY: load
 load: install unload-profiles
 	@command -v $(APPARMOR_PARSER) >/dev/null || { echo "$(INFO) apparmor_parser not found"; exit 1; }
 	@for f in $(PROFILES); do \
@@ -151,7 +146,6 @@ load: install unload-profiles
 		fi; \
 	done
 
-.PHONY: check
 check: install unload-profiles
 	@command -v $(APPARMOR_PARSER) >/dev/null || { echo "$(INFO) apparmor_parser not found"; exit 1; }
 	@tmp=$$(mktemp -d /tmp/apparmor-check.XXXXXX); \
