@@ -319,12 +319,12 @@ sub ensure_exec_var {
         }
     }
 
-    # Insert @{exec_path} definition immediately before the first `profile`
-    # declaration in the file (so it's local to this profile file).
+    # Insert @{exec_path} definition immediately after the profile header
+    # (inside the profile) so the tunable is defined before any use.
     if ($binpath) {
         my $insert_at = 0;
         for my $i (0..$#lines) {
-            if ( $lines[$i] =~ /^\s*profile\b/ ) { $insert_at = $i; last }
+            if ( $lines[$i] =~ /^\s*profile\b/ ) { $insert_at = $i + 1; last }
         }
         splice @lines, $insert_at, 0, "\@{exec_path}=$binpath";
     }
