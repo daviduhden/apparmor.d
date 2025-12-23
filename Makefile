@@ -20,7 +20,7 @@ ABSTRACTIONS := abstractions/tor
 PROFILES := usr.sbin.tor usr.bin.i2pd usr.bin.monerod usr.bin.radicale usr.sbin.opendkim 
 PROFILE_NAMES := tor i2pd monerod radicale opendkim 
 INFO := ==> 
-SCRIPTS := scripts/sync-profiles.pl scripts/enforce-complain-toggle.pl scripts/merge-dupe-rules.pl
+SCRIPTS := scripts/enforce-complain-toggle.pl scripts/merge-dupe-rules.pl
 
 .PHONY: install install-scripts help unload-profiles uninstall load check
 install:
