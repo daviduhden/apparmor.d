@@ -19,6 +19,7 @@ use File::Path qw(make_path);
 use File::Spec;
 use File::Temp qw(tempdir);
 use FindBin;
+use Getopt::Long qw(GetOptions);
 
 # -------------------------
 # Logging
@@ -52,7 +53,7 @@ my $remote_repo = $ENV{APPARMOR_REMOTE}
   // 'https://gitlab.com/apparmor/apparmor.git';
 my @source_roots =
   ( 'profiles/apparmor/profiles/extras', 'profiles/apparmor.d', );
-my @keywords = qw(apache2 postfix dovecot spamc spamd clamd freshclam clamav);
+my @keywords = qw(ssh sshd apache2 postfix dovecot spamc spamd clamd freshclam clamav);
 my @abstractions = (
     qr{<abstractions/apache2-common>},
     qr{<abstractions/postfix-common>},
@@ -62,6 +63,28 @@ my %deps;
 my %exclude;
 
 my $target_root = abs_path( $ENV{APPARMOR_TARGET} // '/etc/apparmor.d' );
+
+# CLI options
+my $abstractions_only = 0;
+my $keyword_list      = '';
+
+GetOptions(
+    'abstractions-only|a' => \$abstractions_only,
+    'keywords|k=s'        => \$keyword_list,
+) or die_tool("Invalid options\n");
+
+if ( $keyword_list ) {
+    my @k = split /,\s*/, $keyword_list;
+    @k = map { lc $_ } grep { length } @k;
+    if (@k) {
+        @keywords = @k;
+        logi("Using keywords: " . join(', ', @keywords));
+    }
+}
+
+if ($abstractions_only) {
+    logi("Running in abstractions-only mode: only sync abstractions and abi files");
+}
 
 run();
 
@@ -83,8 +106,18 @@ sub run {
                       File::Spec->abs2rel( $File::Find::name, $root );
                     my $lower = lc $relative;
                     my $path  = $File::Find::name;
-                    my $matches_keyword =
-                      grep { index( $lower, $_ ) >= 0 } @keywords;
+                    # If abstractions-only mode, include only files under
+                    # 'abstractions' or 'abi' directories (relative to the
+                    # scanned root). This allows syncing only abstractions
+                    # and abi files.
+                    if ($abstractions_only) {
+                        if ( $relative =~ m{(?:^|/)abstractions/} || $relative =~ m{(?:^|/)abi/} ) {
+                            push @selected, [ $root, $relative ];
+                        }
+                        return;
+                    }
+
+                    my $matches_keyword = grep { index( $lower, $_ ) >= 0 } @keywords;
                     my $matches_abstraction = file_matches_abstraction($path);
                     return unless $matches_keyword || $matches_abstraction;
                     return if $exclude{ basename($relative) };
