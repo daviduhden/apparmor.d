@@ -22,7 +22,7 @@ PROFILE_NAMES := tor i2pd monerod radicale opendkim
 INFO := ==> 
 SCRIPTS := scripts/sync-profiles.pl scripts/enforce-complain-toggle.pl scripts/merge-dupe-rules.pl
 
-.PHONY: install help unload-profiles load check uninstall install-scripts
+.PHONY: install install-scripts help unload-profiles uninstall load check
 install:
 	@echo "$(INFO) Creating target directories: $(APPARMOR_DIR) $(ABSTRACTIONS_DIR) $(BINDIR)"
 	install -d $(APPARMOR_DIR) $(ABSTRACTIONS_DIR) $(BINDIR)
@@ -84,9 +84,8 @@ install-scripts:
 		else \
 			echo "$(INFO) Warning: script $$s not found, skipping"; \
 		fi; \
-	done; \
+	done
 	@echo "$(INFO) Scripts installed"
-
 
 help:
 	@echo "$(INFO) Usage: make [target] [VARIABLE=value]"
@@ -103,8 +102,9 @@ help:
 	@echo "  PREFIX             Install prefix (default: $(PREFIX))"
 	@echo "  DESTDIR            Destination directory (default empty)"
 	@echo "  APPARMOR_PARSER    Path to apparmor_parser (default: $(APPARMOR_PARSER))"
-
-
+	@echo "  APPARMOR_FLAGS     Flags for loading profiles (default: '$(APPARMOR_FLAGS)')"
+	@echo "  APPARMOR_CHECK_FLAGS Flags for checking profiles (default: '$(APPARMOR_CHECK_FLAGS)')"
+	@echo "  BINDIR             Directory for helper scripts (default: $(BINDIR))"
 
 unload-profiles:
 	@for name in $(PROFILE_NAMES); do \
