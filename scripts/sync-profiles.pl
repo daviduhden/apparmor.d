@@ -296,17 +296,14 @@ sub ensure_exec_var {
         }
     }
 
-    # If we computed a binpath, insert it directly after the profile header
-    # so it's defined before any use in the body.
+    # If we computed a binpath, replace all @{exec_path} occurrences with
+    # the concrete path so the profile does not need a tunables file or
+    # in-profile assignment (these can break the parser).
     if ($binpath) {
-        my $insert_at = 0;
-        for my $i (0..$#lines) {
-            if ( $lines[$i] =~ /^\s*profile\b/ ) { $insert_at = $i + 1; last }
-        }
-        splice @lines, $insert_at, 0, "\@{exec_path}=$binpath";
+        $text =~ s/\@\{exec_path\}/$binpath/g;
     }
 
-    return join("\n", @lines);
+    return $text;
 }
 
 sub file_matches_abstraction {
