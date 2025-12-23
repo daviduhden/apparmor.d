@@ -10,7 +10,9 @@
 PREFIX ?= /usr
 DESTDIR ?=
 INSTALL ?= install
-APPARMOR_DIR ?= $(DESTDIR)$(PREFIX)/etc/apparmor.d
+# Install profiles under /etc/apparmor.d (respect DESTDIR when set)
+APPARMOR_DIR ?= $(DESTDIR)/etc/apparmor.d
+# Helper scripts go to /usr/local/bin under DESTDIR
 BINDIR ?= $(DESTDIR)/usr/local/bin
 APPARMOR_PARSER ?= apparmor_parser
 APPARMOR_FLAGS ?= -r -T -W
