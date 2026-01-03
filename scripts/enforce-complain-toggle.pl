@@ -20,11 +20,11 @@
 
 use strict;
 use warnings;
-use Getopt::Long qw(GetOptions);
-use File::Path   qw(make_path);
-use File::Copy   qw(copy);
+use Getopt::Long   qw(GetOptions);
+use File::Path     qw(make_path);
+use File::Copy     qw(copy);
 use File::Basename qw(dirname);
-use POSIX        qw(strftime);
+use POSIX          qw(strftime);
 
 # -------------------------
 # Logging
@@ -112,7 +112,10 @@ sub write_state_file {
     }
 
     if ( -e $state_file ) {
-        my $bak = "/var/backups" . $state_file . ".bak." . strftime( "%Y%m%d-%H%M%S", localtime );
+        my $bak =
+            "/var/backups"
+          . $state_file . ".bak."
+          . strftime( "%Y%m%d-%H%M%S", localtime );
         my $bdir = dirname($bak);
         if ( !-d $bdir ) {
             make_path($bdir) or loge("Cannot create backup dir $bdir: $!");
