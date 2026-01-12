@@ -1,5 +1,5 @@
 # OpenDKIM signing daemon profile
-# Purpose: confine `opendkim` to its sockets, keyring, and logging directories.
+# Purpose: confine opendkim to its sockets, keyring, and logging directories.
 # Provide DNSSEC root key read access but limit capabilities and deny ptrace
 # to reduce the risk of credential leakage or process tampering.
 #
