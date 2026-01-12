@@ -1,5 +1,5 @@
 # Tor common abstraction
-# Purpose: shared permissions for the `tor` daemon and its transport
+# Purpose: shared permissions for the tor daemon and its transport
 # helpers. Keep this abstraction minimal and read-only where possible.
 # This file is included by service profiles (e.g., `tor`) and by helper
 # transports. Avoid placing writable paths here; leave per-service writable
