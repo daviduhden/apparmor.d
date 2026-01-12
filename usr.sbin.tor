@@ -1,5 +1,5 @@
 # Tor daemon profile
-# Purpose: confine the `tor` daemon to its runtime directories, logs, and
+# Purpose: confine the tor daemon to its runtime directories, logs, and
 # trust store. Provide necessary randomness devices and pluggable transport
 # data while keeping the profile explicit and minimal.
 #

@@ -1,5 +1,5 @@
 # Monero daemon profile
-# Purpose: confine the `monerod` daemon with explicit network, data,
+# Purpose: confine the monerod daemon with explicit network, data,
 # and log access. Keep writable paths limited to blockchain storage and
 # runtime state to reduce risk and attack surface.
 #
@@ -35,7 +35,7 @@ profile monerod /{usr/,}bin/monerod flags=(attach_disconnected, enforce, mediate
 
   # System and user runtime data
   /sys/devices/** r,
-  owner @{HOME}/.bitmonero/ r,
+  owner @{HOME}/.bitmonero/ rw,
   owner @{HOME}/.bitmonero/** rwk,
 
   # Logging and devices 

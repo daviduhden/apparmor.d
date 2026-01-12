@@ -1,5 +1,5 @@
 # Radicale CalDAV/CardDAV server profile
-# Purpose: confine the `radicale` daemon in enforce mode while allowing
+# Purpose: confine the radicale daemon in enforce mode while allowing
 # access to TLS certificates, runtime data, and necessary Python runtime
 # files. Explicitly restrict access to build tools and other high-risk
 # binaries to reduce the attack surface in case of post-exploitation.

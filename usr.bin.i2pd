@@ -1,5 +1,5 @@
 # I2Pd router profile
-# Purpose: confine the `i2pd` network daemon, restrict filesystem access to
+# Purpose: confine the i2pd network daemon, restrict filesystem access to
 # its runtime state, logs, and configuration, and allow required transports.
 #
 # See the LICENSE file at the top of the project tree for copyright
