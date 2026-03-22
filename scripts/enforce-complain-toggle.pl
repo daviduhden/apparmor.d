@@ -1,17 +1,21 @@
 #!/usr/bin/perl
 
 # AppArmor enforce-complain toggle script
+#
 # Saves the list of profiles currently in enforce mode to a state file,
 # then switches them to complain mode. Can later restore the profiles
 # back to enforce mode using the saved state file.
+#
 # Usage:
 #   enforce-complain-toggle.pl [--state-file PATH] [--dry-run] downgrade
 #   enforce-complain-toggle.pl [--state-file PATH] [--dry-run] restore
+#
 # Options:
 #   --state-file PATH   State file to save/read the list
 #                      (default: /var/lib/apparmor/enforce_to_complain.list)
 #   --dry-run           Do not change anything; only print commands
 #   --help              Show this help
+#
 # Requires 'apparmor-utils' package for aa-complain and aa-enforce.
 # Must be run as root (use sudo) to apply changes.
 #
