@@ -92,20 +92,6 @@ USAGE
     exit 2;
 }
 
-GetOptions(
-    "policy-dir=s"    => \$policy_dir,
-    "apply!"          => \$apply,
-    "backup-suffix=s" => \$backup_suffix,
-    "verbose!"        => \$verbose,
-) or usage();
-
--d $policy_dir or do { loge("ERROR: not a directory: $policy_dir"); exit 2; };
-
-if ( !$backup_suffix ) {
-    my $ts = strftime( "%Y%m%d-%H%M%S", localtime() );
-    $backup_suffix = ".bak.$ts";
-}
-
 # -------------------------
 # Helpers
 # -------------------------
@@ -352,83 +338,131 @@ sub transform_lines {
 # -------------------------
 # Walk files
 # -------------------------
-my @files;
-find(
-    {
-        no_chdir => 1,
-        wanted   => sub {
-            return if -d $File::Find::name;
-            return if is_skippable_file($File::Find::name);
-            push @files, $File::Find::name;
-        },
-    },
-    $policy_dir
-);
+sub parse_args {
+    GetOptions(
+        "policy-dir=s"    => \$policy_dir,
+        "apply!"          => \$apply,
+        "backup-suffix=s" => \$backup_suffix,
+        "verbose!"        => \$verbose,
+    ) or usage();
+}
 
-@files = sort @files;
+sub prepare_options {
+    -d $policy_dir
+      or do { loge("ERROR: not a directory: $policy_dir"); exit 2; };
 
-my @planned;
-my $errors = 0;
-
-for my $f (@files) {
-
-    # Read as text-ish, but don't die on odd bytes
-    open my $fh, "<", $f or next;
-    my @orig = <$fh>;
-    close $fh;
-
-    my @new = transform_lines(@orig);
-
-    if ( @new != @orig || join( "", @new ) ne join( "", @orig ) ) {
-        push @planned, [ $f, join( "", @orig ), join( "", @new ) ];
+    if ( !$backup_suffix ) {
+        my $ts = strftime( "%Y%m%d-%H%M%S", localtime() );
+        $backup_suffix = ".bak.$ts";
     }
 }
 
-if ( !@planned ) {
-    logi("No changes planned.");
-    exit 0;
+sub collect_policy_files {
+    my @files;
+    find(
+        {
+            no_chdir => 1,
+            wanted   => sub {
+                return if -d $File::Find::name;
+                return if is_skippable_file($File::Find::name);
+                push @files, $File::Find::name;
+            },
+        },
+        $policy_dir
+    );
+
+    return sort @files;
 }
 
-for my $i ( 0 .. $#planned ) {
-    last if $i >= 30;
-    logi("PLAN: $planned[$i]->[0]");
+sub build_change_plan {
+    my (@files) = @_;
+    my @planned;
+
+    for my $f (@files) {
+
+        # Read as text-ish, but don't die on odd bytes
+        open my $fh, "<", $f or next;
+        my @orig = <$fh>;
+        close $fh;
+
+        my @new = transform_lines(@orig);
+
+        if ( @new != @orig || join( "", @new ) ne join( "", @orig ) ) {
+            push @planned, [ $f, join( "", @orig ), join( "", @new ) ];
+        }
+    }
+
+    return @planned;
 }
-logi( "... and " . ( @planned - 30 ) . " more files" ) if @planned > 30;
 
-if ( !$apply ) {
-    logw("Dry-run only. Re-run with --apply to write changes.");
-    exit 2;
+sub show_plan {
+    my (@planned) = @_;
+
+    for my $i ( 0 .. $#planned ) {
+        last if $i >= 30;
+        logi("PLAN: $planned[$i]->[0]");
+    }
+    logi( "... and " . ( @planned - 30 ) . " more files" ) if @planned > 30;
 }
 
-for my $p (@planned) {
-    my ( $file, $old, $new ) = @$p;
+sub apply_changes {
+    my (@planned) = @_;
+    my $errors = 0;
 
-    my $backup = "/var/backups" . $file . $backup_suffix;
-    my $bdir   = dirname($backup);
-    unless ( -d $bdir ) {
-        make_path($bdir) or do {
-            loge("ERROR: failed to create backup dir: $bdir: $!");
+    for my $p (@planned) {
+        my ( $file, $old, $new ) = @$p;
+
+        my $backup = "/var/backups" . $file . $backup_suffix;
+        my $bdir   = dirname($backup);
+        unless ( -d $bdir ) {
+            make_path($bdir) or do {
+                loge("ERROR: failed to create backup dir: $bdir: $!");
+                $errors++;
+                next;
+            };
+        }
+
+        if ( !copy( $file, $backup ) ) {
+            loge("ERROR: failed to create backup: $file -> $backup: $!");
+            $errors++;
+            next;
+        }
+
+        open my $out, ">", $file or do {
+            loge("ERROR: failed to write $file: $!");
             $errors++;
             next;
         };
+        print {$out} $new;
+        close $out;
+
+        logi("WROTE: $file (backup: $backup)") if $verbose;
     }
 
-    if ( !copy( $file, $backup ) ) {
-        loge("ERROR: failed to create backup: $file -> $backup: $!");
-        $errors++;
-        next;
-    }
-
-    open my $out, ">", $file or do {
-        loge("ERROR: failed to write $file: $!");
-        $errors++;
-        next;
-    };
-    print {$out} $new;
-    close $out;
-
-    logi("WROTE: $file (backup: $backup)") if $verbose;
+    print "\nDone.\n";
+    return $errors ? 2 : 0;
 }
 
-print "\nDone.\n";
-exit( $errors ? 2 : 0 );
+sub main {
+    parse_args();
+    prepare_options();
+
+    my @files   = collect_policy_files();
+    my @planned = build_change_plan(@files);
+
+    if ( !@planned ) {
+        logi("No changes planned.");
+        exit 0;
+    }
+
+    show_plan(@planned);
+
+    if ( !$apply ) {
+        logw("Dry-run only. Re-run with --apply to write changes.");
+        exit 2;
+    }
+
+    exit( apply_changes(@planned) );
+}
+
+main();
