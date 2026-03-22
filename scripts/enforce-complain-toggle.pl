@@ -265,24 +265,39 @@ my $state_file = "/var/lib/apparmor/enforce_to_complain.list";
 my $dry_run    = 0;
 my $help       = 0;
 
-GetOptions(
-    "state-file=s" => \$state_file,
-    "dry-run!"     => \$dry_run,
-    "help!"        => \$help,
-) or usage();
+sub parse_args {
+    GetOptions(
+        "state-file=s" => \$state_file,
+        "dry-run!"     => \$dry_run,
+        "help!"        => \$help,
+    ) or usage();
 
-usage() if $help;
-
-my $cmd = shift @ARGV // "";
-usage() unless $cmd eq "downgrade" || $cmd eq "restore";
-
-check_apparmor_available();
-check_tools();
-require_root($dry_run);
-
-if ( $cmd eq "downgrade" ) {
-    exit( cmd_downgrade( $state_file, $dry_run ) );
+    usage() if $help;
 }
-else {
-    exit( cmd_restore( $state_file, $dry_run ) );
+
+sub parse_command {
+    my $cmd = shift @ARGV // "";
+    usage() unless $cmd eq "downgrade" || $cmd eq "restore";
+    return $cmd;
 }
+
+sub check_prereqs {
+    check_apparmor_available();
+    check_tools();
+    require_root($dry_run);
+}
+
+sub run_command {
+    my ($cmd) = @_;
+    return cmd_downgrade( $state_file, $dry_run ) if $cmd eq "downgrade";
+    return cmd_restore( $state_file, $dry_run );
+}
+
+sub main {
+    parse_args();
+    my $cmd = parse_command();
+    check_prereqs();
+    exit( run_command($cmd) );
+}
+
+main();
