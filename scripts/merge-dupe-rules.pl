@@ -1,4 +1,31 @@
 #!/usr/bin/perl
+
+# AppArmor duplicate file rule merger
+#
+# Scans AppArmor policy files for consecutive duplicate file rules
+# (same qualifiers + same path) and merges them by unioning permissions.
+#
+# Usage:
+#   merge-dupe-rules.pl [--policy-dir DIR] [--apply]
+#                       [--backup-suffix SUFFIX] [--verbose]
+#
+# Options:
+#   --policy-dir DIR       Directory to scan for AppArmor policies
+#                          (default: /etc/apparmor.d)
+#   --apply                Write changes to files (default: dry-run,
+#                          only prints plan)
+#   --backup-suffix SUFFIX Suffix for backup files
+#                          (default: .bak.TIMESTAMP in /var/backups)
+#   --verbose              Print detailed info about written files
+#
+# Exit codes:
+#   0 OK / no changes
+#   2 Changes would be made (dry-run) or some files could not be
+#     processed
+#
+# See the LICENSE file at the top of the project tree for copyright
+# and license details.
+
 use strict;
 use warnings;
 
