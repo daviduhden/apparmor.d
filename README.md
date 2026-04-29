@@ -4,7 +4,7 @@ Collection of AppArmor profiles and abstractions for common daemons
 (Tor, i2pd, Monero `monerod`, Radicale, OpenDKIM), plus utilities to manage them.
 
 Main contents
-- Profiles: `usr.sbin.tor`, `usr.bin.i2pd`, `usr.bin.monerod`, `usr.bin.radicale`, `usr.sbin.opendkim`
+- Profiles: `usr.sbin.tor`, `usr.bin.i2pd`, `usr.bin.monerod`, `usr.bin.radicale`, `usr.sbin.opendkim`, `usr.bin.xd-torrent`
 - Abstractions: `abstractions/tor`
 - Sync script: `scripts/sync-profiles.pl`
 - `Makefile`: installs profiles, abstractions and helper scripts

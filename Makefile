@@ -19,8 +19,8 @@ APPARMOR_FLAGS ?= -r -T -W
 APPARMOR_CHECK_FLAGS ?= -T -W -K
 ABSTRACTIONS_DIR := $(APPARMOR_DIR)/abstractions
 ABSTRACTIONS := abstractions/tor
-PROFILES := usr.sbin.tor usr.bin.i2pd usr.bin.monerod usr.bin.radicale usr.sbin.opendkim
-PROFILE_NAMES := tor i2pd monerod radicale opendkim
+PROFILES := usr.sbin.tor usr.bin.i2pd usr.bin.monerod usr.bin.radicale usr.sbin.opendkim usr.bin.xd-torrent
+PROFILE_NAMES := tor i2pd monerod radicale opendkim xd-torrent
 INFO := ==>
 SCRIPTS := scripts/enforce-complain-toggle.pl scripts/merge-dupe-rules.pl
 
