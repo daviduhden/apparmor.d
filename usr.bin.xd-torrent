@@ -1,0 +1,57 @@
+# XD torrent client profile
+# Purpose: confine the I2P-only torrent daemon while allowing its expected
+# storage, config, and localhost I2P SAM connectivity.
+#
+# See the LICENSE file at the top of the project tree for copyright
+# and license details.
+
+# ABI and global tunables
+abi <abi/4.0>,
+include <tunables/global>
+
+# Profile definition
+profile xd-torrent /{usr/,}bin/{XD,xd-torrent} flags=(attach_disconnected, enforce, mediate_deleted) {
+
+  # Standard abstractions
+  include <abstractions/base>
+  include <abstractions/nameservice>
+  include <abstractions/ssl_certs>
+
+  # Network access (I2P SAM + peer traffic + loopback web/RPC UI)
+  network inet stream,
+  network inet6 stream,
+  network inet tcp,
+  network inet6 tcp,
+  network inet udp,
+  network inet6 udp,
+
+  # Devices
+  /dev/null rw,
+  /dev/urandom r,
+
+  # System service-style config and state (common distro packaging)
+  /etc/xd.conf r,
+  /etc/xd/** r,
+  /var/lib/xd/ rw,
+  /var/lib/xd/** rwk,
+  /var/log/xd/ rw,
+  /var/log/xd/** rw,
+  /{,var/}run/xd/ rw,
+  /{,var/}run/xd/** rwk,
+
+  # User-mode config/state (manual execution)
+  owner @{HOME}/.config/xd/ rw,
+  owner @{HOME}/.config/xd/** rwk,
+  owner @{HOME}/.local/share/xd/ rw,
+  owner @{HOME}/.local/share/xd/** rwk,
+  owner @{HOME}/.cache/xd/ rw,
+  owner @{HOME}/.cache/xd/** rwk,
+
+  # Executable and libs
+  /{usr/,}bin/{XD,xd-torrent} Px,
+  /{usr/,}lib/** mr,
+
+  # Local overrides
+  include if exists <local/usr.bin.xd-torrent>
+
+}
