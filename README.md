@@ -6,7 +6,7 @@ Collection of AppArmor profiles and abstractions for common daemons
 Main contents
 - Profiles: `usr.sbin.tor`, `usr.bin.i2pd`, `usr.bin.monerod`, `usr.bin.radicale`, `usr.sbin.opendkim`, `usr.bin.xd-torrent`
 - Abstractions: `abstractions/tor`
-- Sync script: `scripts/sync-profiles.pl`
+- Helper scripts: `scripts/enforce-complain-toggle.pl`, `scripts/merge-dupe-rules.pl`
 - `Makefile`: installs profiles, abstractions and helper scripts
 
 Quick `Makefile` usage
@@ -50,7 +50,7 @@ What `make install` does
 - Creates `$(DESTDIR)$(PREFIX)/etc/apparmor.d/abstractions/` and copies `abstractions/tor`.
 - Copies the listed profiles into `$(DESTDIR)$(PREFIX)/etc/apparmor.d/`.
 - Creates empty stub files in `$(DESTDIR)$(PREFIX)/etc/apparmor.d/local/` for each profile (if missing).
-- Installs `sync-profiles` and `enforce-complain-toggle` into `$(BINDIR)`.
+- Installs `enforce-complain-toggle` and `merge-dupe-rules` into `$(BINDIR)`.
 
 Notes
 - `make load` invokes `apparmor_parser` with the configured flags; it will error if the parser is not installed.
