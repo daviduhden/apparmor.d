@@ -1,0 +1,44 @@
+# Monero Light Wallet Server daemon profile
+# Purpose: confine the monero-lws daemon to its database, runtime, logs,
+# config, and public REST sockets while keeping filesystem writes narrow.
+#
+# See the LICENSE file at the top of the project tree for copyright
+# and license details.
+
+abi <abi/4.0>,
+include <tunables/global>
+
+profile monero-lws-daemon /{usr/,}bin/monero-lws-daemon flags=(attach_disconnected, enforce, mediate_deleted) {
+
+  include <abstractions/base>
+  include <abstractions/nameservice>
+  include <abstractions/ssl_certs>
+
+  # Devices and randomness
+  /dev/null rw,
+  /dev/random r,
+  /dev/urandom r,
+
+  # Configuration and database
+  /etc/monero-lws/ r,
+  /etc/monero-lws/** r,
+  owner /var/lib/monero-lws/ r,
+  owner /var/lib/monero-lws/** rwk,
+
+  # Logs and runtime sockets
+  owner /var/log/monero-lws/ r,
+  owner /var/log/monero-lws/** rwk,
+  /{,var/}run/monero-lws/ r,
+  /{,var/}run/monero-lws/** rwk,
+
+  # Network sockets
+  network inet stream,
+  network inet6 stream,
+
+  # Executable and shared libraries
+  /{usr/,}bin/monero-lws-daemon Px,
+  /{usr/,}lib/** mr,
+
+  # Local overrides
+  include if exists <local/usr.bin.monero-lws-daemon>
+}

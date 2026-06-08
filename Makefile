@@ -16,11 +16,11 @@ APPARMOR_DIR ?= $(DESTDIR)/etc/apparmor.d
 BINDIR ?= $(DESTDIR)/usr/local/bin
 APPARMOR_PARSER ?= apparmor_parser
 APPARMOR_FLAGS ?= -r -T -W
-APPARMOR_CHECK_FLAGS ?= -T -W -K
+APPARMOR_CHECK_FLAGS ?= -Q -T -W -K
 ABSTRACTIONS_DIR := $(APPARMOR_DIR)/abstractions
 ABSTRACTIONS := abstractions/tor
-PROFILES := usr.sbin.tor usr.bin.i2pd usr.bin.monerod usr.bin.radicale usr.sbin.opendkim usr.bin.xd-torrent
-PROFILE_NAMES := tor i2pd monerod radicale opendkim xd-torrent
+PROFILES := usr.sbin.tor usr.bin.i2pd usr.bin.monerod usr.bin.monero-lws-daemon usr.bin.radicale usr.sbin.opendkim usr.bin.xd-torrent
+PROFILE_NAMES := tor i2pd monerod monero-lws-daemon radicale opendkim xd-torrent
 INFO := ==>
 SCRIPTS := scripts/enforce-complain-toggle.pl scripts/merge-dupe-rules.pl
 
