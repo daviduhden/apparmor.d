@@ -29,9 +29,9 @@ profile monerod /{usr/,}bin/monerod flags=(attach_disconnected, enforce, mediate
   network inet udp,
   network inet6 udp,
 
-  # Blockchain storage and mounts 
-  /mnt/ssd/monero/ r,
-  /mnt/ssd/monero/** rwk,
+  # Blockchain storage (default deployment path)
+  /var/lib/monero/ r,
+  /var/lib/monero/** rwk,
 
   # System and user runtime data
   /sys/devices/** r,
@@ -61,4 +61,3 @@ profile monerod /{usr/,}bin/monerod flags=(attach_disconnected, enforce, mediate
   include if exists <local/usr.bin.monerod>
 
 }
-
