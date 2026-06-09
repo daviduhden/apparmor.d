@@ -1,6 +1,6 @@
 # XD torrent client profile
-# Purpose: confine the I2P-only torrent daemon while allowing its expected
-# storage, config, and localhost I2P SAM connectivity.
+# Purpose: confine the XD torrent daemon with generic paths for both
+# system-service and user-mode deployments.
 #
 # See the LICENSE file at the top of the project tree for copyright
 # and license details.
@@ -10,7 +10,7 @@ abi <abi/4.0>,
 include <tunables/global>
 
 # Profile definition
-profile xd-torrent /{usr/,}bin/{XD,xd-torrent} flags=(attach_disconnected, enforce, mediate_deleted) {
+profile xd-torrent /{usr/,usr/local/}bin/{XD,xd-torrent} flags=(attach_disconnected, enforce, mediate_deleted) {
 
   # Standard abstractions
   include <abstractions/base>
@@ -29,26 +29,50 @@ profile xd-torrent /{usr/,}bin/{XD,xd-torrent} flags=(attach_disconnected, enfor
   /dev/null rw,
   /dev/urandom r,
 
-  # System service-style config and state (common distro packaging)
+  # System service-style config and state
   /etc/xd.conf r,
   /etc/xd/** r,
+  /etc/XD.conf r,
+  /etc/XD/** r,
+  /usr/local/etc/xd.conf r,
+  /usr/local/etc/xd/** r,
+  /usr/local/etc/XD.conf r,
+  /usr/local/etc/XD/** r,
   /var/lib/xd/ rw,
   /var/lib/xd/** rwk,
+  /var/lib/XD/ rw,
+  /var/lib/XD/** rwk,
   /var/log/xd/ rw,
   /var/log/xd/** rw,
+  /var/log/XD/ rw,
+  /var/log/XD/** rw,
   /{,var/}run/xd/ rw,
   /{,var/}run/xd/** rwk,
+  /{,var/}run/XD/ rw,
+  /{,var/}run/XD/** rwk,
 
-  # User-mode config/state (manual execution)
+  # User-mode config/state
   owner @{HOME}/.config/xd/ rw,
   owner @{HOME}/.config/xd/** rwk,
+  owner @{HOME}/.config/XD/ rw,
+  owner @{HOME}/.config/XD/** rwk,
+  owner @{HOME}/.config/xd-torrent/ rw,
+  owner @{HOME}/.config/xd-torrent/** rwk,
   owner @{HOME}/.local/share/xd/ rw,
   owner @{HOME}/.local/share/xd/** rwk,
+  owner @{HOME}/.local/share/XD/ rw,
+  owner @{HOME}/.local/share/XD/** rwk,
+  owner @{HOME}/.local/share/xd-torrent/ rw,
+  owner @{HOME}/.local/share/xd-torrent/** rwk,
   owner @{HOME}/.cache/xd/ rw,
   owner @{HOME}/.cache/xd/** rwk,
+  owner @{HOME}/.cache/XD/ rw,
+  owner @{HOME}/.cache/XD/** rwk,
+  owner @{HOME}/.cache/xd-torrent/ rw,
+  owner @{HOME}/.cache/xd-torrent/** rwk,
 
   # Executable and libs
-  /{usr/,}bin/{XD,xd-torrent} Px,
+  /{usr/,usr/local/}bin/{XD,xd-torrent} Px,
   /{usr/,}lib/** mr,
 
   # Local overrides

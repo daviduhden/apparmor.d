@@ -1,0 +1,110 @@
+# Fail2Ban server profile
+# Purpose: confine fail2ban-server with portable distro paths and common
+# firewall/journal backends so it can be reused across different hosts.
+#
+# See the LICENSE file at the top of the project tree for copyright
+# and license details.
+
+abi <abi/4.0>,
+
+include <tunables/global>
+
+# Profile definition
+profile fail2ban-server /{usr/,usr/local/}bin/fail2ban-server flags=(attach_disconnected, enforce, mediate_deleted) {
+  include <abstractions/base>
+  include <abstractions/nameservice>
+  include <abstractions/python>
+  include <abstractions/ssl_certs>
+  include if exists <local/usr.bin.fail2ban-server>
+
+  capability net_admin,
+
+  # Local control socket used by fail2ban-client.
+  network unix stream,
+
+  # nft/iptables actions use netlink to manage kernel firewall rules.
+  network netlink raw,
+
+  # Fail2Ban package and jail/filter configuration.
+  /etc/fail2ban/ r,
+  /etc/fail2ban/** r,
+  /etc/default/fail2ban r,
+  /etc/sysconfig/fail2ban r,
+  /usr/share/fail2ban/ r,
+  /usr/share/fail2ban/** r,
+  /usr/local/share/fail2ban/ r,
+  /usr/local/share/fail2ban/** r,
+  /{usr/,usr/local/}bin/fail2ban-server mr,
+  /{usr/,usr/local/}bin/fail2ban-client mr,
+  /{usr/,usr/local/}bin/fail2ban-regex mr,
+
+  # Python site-packages for distro variants.
+  /{usr,usr/local}/lib/python3*/site-packages/** r,
+  /{usr,usr/local}/lib/python3*/dist-packages/** r,
+
+  # Persistent state and runtime socket/pid files.
+  /var/lib/fail2ban/ rw,
+  /var/lib/fail2ban/** rwk,
+  /var/cache/fail2ban/ rw,
+  /var/cache/fail2ban/** rwk,
+  /{,var/}run/fail2ban/ rw,
+  /{,var/}run/fail2ban/** rwk,
+
+  # Log target and rotated log files.
+  /var/log/fail2ban/ rw,
+  /var/log/fail2ban/** rw,
+  /var/log/fail2ban.log rw,
+  /var/log/fail2ban.log.* rw,
+
+  # Common service logs used by file-based jails.
+  /var/log/auth.log r,
+  /var/log/auth.log.* r,
+  /var/log/secure r,
+  /var/log/secure.* r,
+  /var/log/messages r,
+  /var/log/messages.* r,
+  /var/log/syslog r,
+  /var/log/syslog.* r,
+  /var/log/apache2/ r,
+  /var/log/apache2/** r,
+  /var/log/httpd/ r,
+  /var/log/httpd/** r,
+  /var/log/nginx/ r,
+  /var/log/nginx/** r,
+  /var/log/postfix/ r,
+  /var/log/postfix/** r,
+
+  # Journal reader backend.
+  /run/log/journal/ r,
+  /run/log/journal/** r,
+  /var/log/journal/ r,
+  /var/log/journal/** r,
+  /etc/machine-id r,
+  /proc/sys/kernel/random/boot_id r,
+
+  # Firewall lock file used by xtables.
+  /run/xtables.lock rw,
+  /var/run/xtables.lock rw,
+
+  # Helpers used by action templates.
+  /{bin,usr/bin}/sh ix,
+  /{bin,usr/bin}/dash ix,
+  /{bin,usr/bin}/bash ix,
+  /{bin,usr/bin}/sed ix,
+  /{bin,usr/bin}/grep ix,
+  /{bin,usr/bin}/awk ix,
+  /{bin,usr/bin}/cat ix,
+  /{bin,usr/bin}/date ix,
+  /{bin,usr/bin}/printf ix,
+  /{bin,usr/bin}/dirname ix,
+  /{bin,usr/bin}/head ix,
+  /{bin,usr/bin}/sort ix,
+  /{bin,usr/bin}/tail ix,
+  /{bin,usr/bin}/tr ix,
+  /{bin,usr/bin}/uniq ix,
+  /{sbin,usr/sbin,usr/local/sbin}/ip ix,
+  /{sbin,usr/sbin,usr/local/sbin}/iptables ix,
+  /{sbin,usr/sbin,usr/local/sbin}/ip6tables ix,
+  /{sbin,usr/sbin,usr/local/sbin}/nft ix,
+  /{sbin,usr/sbin,usr/local/sbin}/xtables-nft-multi ix,
+}

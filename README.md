@@ -2,10 +2,10 @@
 
 Collection of AppArmor profiles and abstractions for common daemons
 (Tor, i2pd, Monero `monerod`, Monero Light Wallet Server `monero-lws-daemon`,
-Radicale, OpenDKIM), plus utilities to manage them.
+Radicale, OpenDKIM, Fail2Ban), plus utilities to manage them.
 
 Main contents
-- Profiles: `usr.sbin.tor`, `usr.bin.i2pd`, `usr.bin.monerod`, `usr.bin.monero-lws-daemon`, `usr.bin.radicale`, `usr.sbin.opendkim`, `usr.bin.xd-torrent`
+- Profiles: `usr.sbin.tor`, `usr.bin.i2pd`, `usr.bin.monerod`, `usr.bin.monero-lws-daemon`, `usr.bin.radicale`, `usr.sbin.opendkim`, `usr.bin.xd-torrent`, `usr.bin.fail2ban-server`
 - Abstractions: `abstractions/tor`
 - Helper scripts: `scripts/enforce-complain-toggle.pl`, `scripts/merge-dupe-rules.pl`
 - `Makefile`: installs profiles, abstractions and helper scripts
