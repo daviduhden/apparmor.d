@@ -34,6 +34,8 @@ profile monero-lws-daemon /{usr/,}bin/monero-lws-daemon flags=(attach_disconnect
   # Network sockets
   network inet stream,
   network inet6 stream,
+  network inet tcp,
+  network inet6 tcp,
 
   # Executable and shared libraries
   /{usr/,}bin/monero-lws-daemon Px,

@@ -26,8 +26,6 @@ profile monerod /{usr/,}bin/monerod flags=(attach_disconnected, enforce, mediate
   network inet6 stream,
   network inet tcp,
   network inet6 tcp,
-  network inet udp,
-  network inet6 udp,
 
   # Blockchain storage (default deployment path)
   /var/lib/monero/ r,
