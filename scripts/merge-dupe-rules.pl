@@ -3,28 +3,31 @@
 # AppArmor duplicate file rule merger
 #
 # Scans AppArmor policy files for consecutive duplicate file rules
-# (same qualifiers + same path) and merges them by unioning permissions.
+# (same qualifiers + same path) and merges them by unioning
+# permissions.
 #
 # Usage:
 #   merge-dupe-rules.pl [--policy-dir DIR] [--apply]
 #                       [--backup-suffix SUFFIX] [--verbose]
 #
 # Options:
-#   --policy-dir DIR       Directory to scan for AppArmor policies
-#                          (default: /etc/apparmor.d)
-#   --apply                Write changes to files (default: dry-run,
-#                          only prints plan)
+#   --policy-dir DIR       Directory to scan for AppArmor
+#                          policies (default: /etc/apparmor.d)
+#   --apply                Write changes to files (default:
+#                          dry-run, only prints plan)
 #   --backup-suffix SUFFIX Suffix for backup files
-#                          (default: .bak.TIMESTAMP in /var/backups)
-#   --verbose              Print detailed info about written files
+#                          (default: .bak.TIMESTAMP in
+#                           /var/backups)
+#   --verbose              Print detailed info about written
+#                          files
 #
 # Exit codes:
 #   0 OK / no changes
-#   2 Changes would be made (dry-run) or some files could not be
-#     processed
+#   2 Changes would be made (dry-run) or some files could
+#     not be processed
 #
-# See the LICENSE file at the top of the project tree for copyright
-# and license details.
+# See the LICENSE file at the top of the project tree for
+# copyright and license details.
 
 use strict;
 use warnings;
@@ -51,9 +54,9 @@ if ($use_color) {
     $RESET  = "\e[0m";
 }
 
-sub logi { print "${GREEN}✅ [INFO]${RESET} $_[0]\n"; }
-sub logw { print STDERR "${YELLOW}⚠️  [WARN]${RESET} $_[0]\n"; }
-sub loge { print STDERR "${RED}❌ [ERROR]${RESET} $_[0]\n"; }
+sub logi { print "${GREEN}[INFO]${RESET} $_[0]\n"; }
+sub logw { print STDERR "${YELLOW}[WARN]${RESET} $_[0]\n"; }
+sub loge { print STDERR "${RED}[ERROR]${RESET} $_[0]\n"; }
 
 sub die_tool {
     my ($msg) = @_;
@@ -65,29 +68,36 @@ sub die_tool {
 # Options
 # -------------------------
 my $policy_dir    = "/etc/apparmor.d";
-my $apply         = 0;                   # default: dry-run
+my $apply         = 0;       # default: dry-run
 my $backup_suffix = "";
 my $verbose       = 0;
 
 sub usage {
     print STDERR <<"USAGE";
 Usage:
-  $0 [--policy-dir DIR] [--apply] [--backup-suffix SUFFIX] [--verbose]
+  $0 [--policy-dir DIR] [--apply] \\
+     [--backup-suffix SUFFIX] [--verbose]
 
 What it does:
   - Scans AppArmor policy files under DIR.
-  - Merges consecutive duplicate file rules (same qualifiers + same path) by unioning permissions.
+  - Merges consecutive duplicate file rules (same
+    qualifiers + same path) by unioning permissions.
 
 Safe/Conservative:
-  - Only merges simple single-line file path rules ending with ',' where the path starts with '/' or '@{...}'.
-  - Does not touch dbus/capability/network/mount/etc rules, includes, or rename/link rules (lines containing '->').
+  - Only merges simple single-line file path rules
+    ending with ',' where the path starts with '/'
+    or '\@{...}'.
+  - Does not touch dbus/capability/network/mount/etc
+    rules, includes, or rename/link rules (lines
+    containing '->').
 
 Default mode:
   - Dry-run (prints plan). Use --apply to write changes.
 
 Exit codes:
-  0 OK / no changes
-  2 Changes would be made (dry-run) or some files could not be processed
+   0 OK / no changes
+   2 Changes would be made (dry-run) or some files
+     could not be processed
 USAGE
     exit 2;
 }
@@ -102,7 +112,10 @@ sub split_comment {
         my $ch = substr( $line, $i, 1 );
         $in_quote = !$in_quote if $ch eq '"';
         if ( $ch eq '#' && !$in_quote ) {
-            return ( substr( $line, 0, $i ), substr( $line, $i ) );
+            return (
+                substr( $line, 0, $i ),
+                substr( $line, $i )
+            );
         }
     }
     return ( $line, "" );
@@ -126,7 +139,8 @@ sub perm_atoms {
 
     for my $tok ( grep { length } split( /\s+/, $perm_str ) ) {
 
-# If token ends with 'x' and is longer than 1, treat as an exec-mode token (ix/px/cx/Ux/Pix/etc.)
+        # If token ends with 'x' and is longer than 1,
+        # treat as an exec-mode token (ix/px/cx/Ux/...)
         if ( length($tok) > 1 && $tok =~ /x$/i ) {
             push @atoms, $tok unless $seen{$tok}++;
             next;
@@ -149,27 +163,31 @@ sub join_atoms {
 sub is_skippable_file {
     my ($path) = @_;
     return 1 if $path =~ m{/(?:cache|\.cache)/};
-    return 1 if $path =~ /\.(?:swp|bak|dpkg-old|dpkg-dist|rpmnew|rpmsave)$/;
+    return 1
+      if $path =~
+        /\.(?:swp|bak|dpkg-old|dpkg-dist|rpmnew|rpmsave)$/;
     return 1 if $path =~ /~$/;
     return 0;
 }
 
 # Parse a *simple* AppArmor file rule:
 #   [indent][qualifiers] <path> <perms>,
-# where qualifiers can include audit/deny/owner (in any order),
-# and <path> must start with '/' or '@{...}' (unquoted or quoted).
+# where qualifiers can include audit/deny/owner (in any
+# order), and <path> must start with '/' or '@{...}'
+# (unquoted or quoted).
 sub parse_file_rule {
     my ($raw) = @_;
 
-    return undef if $raw =~ /->/;    # avoid rename/link rules
+    return undef if $raw =~ /->/;    # avoid rename/link
     return undef
-      if $raw !~ /,\s*$/;    # must end with a comma (after stripping comment)
+      if $raw !~ /,\s*$/;    # need trailing comma
     return undef if $raw =~ /^\s*(?:include|#include)\b/i;
 
     # reject obvious non-path rule starters
     return undef
       if $raw =~
-/^\s*(?:dbus|capability|network|mount|signal|ptrace|unix|change_profile|profile)\b/i;
+        m{^\s*(?:dbus|capability|network|mount|signal|
+          ptrace|unix|change_profile|profile)\b}ix;
 
     my ($indent) = ( $raw =~ /^(\s*)/ );
     my $body = $raw;
@@ -197,15 +215,17 @@ sub parse_file_rule {
     # only merge if path begins with '/' or '@{'
     my $path_check = $path;
     $path_check =~ s/^"//;    # if quoted
-    return undef unless ( $path_check =~ m{^/} || $path_check =~ m{^\@\{} );
+    return undef
+      unless $path_check =~ m{^/}
+        || $path_check =~ m{^\@\{} ;
 
     # perms until trailing comma
     $body =~ s/,\s*$//;
     my $perms = normalize_ws($body);
     return undef if $perms eq "";
 
-    my $key = join( "|", $indent, $qual, $path )
-      ;    # conservative: includes indent + qualifiers + path
+    # conservative: includes indent + qualifiers + path
+    my $key = join( "|", $indent, $qual, $path );
 
     return {
         indent => $indent,
@@ -228,7 +248,9 @@ sub make_rule_line {
     $lhs = normalize_ws($lhs);
 
     my $line = $indent . $lhs . " " . $perms . ",";
-    $line .= " " . $comment if defined($comment) && $comment ne "";
+    if (defined($comment) && $comment ne "") {
+        $line .= " " . $comment;
+    }
     return $line;
 }
 
@@ -240,12 +262,15 @@ sub transform_lines {
 
     my @out;
 
-    my $pending; # hashref from parse_file_rule + merged atoms, comment, newline
+    # hashref from parse_file_rule + merged atoms,
+    # comment, newline
+    my $pending;
     my @pending_atoms;
     my %pending_seen;
     my $pending_comment = "";
     my $pending_nl      = "\n";
-    my @gap             = ();     # blank/comment-only lines between duplicates
+    # blank/comment-only lines between duplicates
+    my @gap             = ();
 
     my $flush = sub {
         return unless $pending;
@@ -293,7 +318,9 @@ sub transform_lines {
 
         my $rule = parse_file_rule($trimmed);
         if ($rule) {
-            if ( $pending && $rule->{key} eq $pending->{key} ) {
+            if (   $pending
+                && $rule->{key} eq $pending->{key} )
+            {
 
                 # merge permissions
                 for my $a ( perm_atoms( $rule->{perms} ) ) {
@@ -301,12 +328,13 @@ sub transform_lines {
                     push @pending_atoms, $a;
                 }
 
-          # keep first comment, but if first is empty and this has one, adopt it
+                # keep first comment; adopt new one if
+                # first is empty
                 if ( !$pending_comment && $comment ) {
                     $pending_comment = $comment;
                 }
 
-                # keep newline style from first line in the run
+                # keep newline style from first in run
                 next;
             }
 
@@ -349,10 +377,14 @@ sub parse_args {
 
 sub prepare_options {
     -d $policy_dir
-      or do { loge("ERROR: not a directory: $policy_dir"); exit 2; };
+      or do {
+        loge("ERROR: not a directory: $policy_dir");
+        exit 2;
+      };
 
     if ( !$backup_suffix ) {
-        my $ts = strftime( "%Y%m%d-%H%M%S", localtime() );
+        my $ts =
+          strftime( "%Y%m%d-%H%M%S", localtime() );
         $backup_suffix = ".bak.$ts";
     }
 }
@@ -364,7 +396,9 @@ sub collect_policy_files {
             no_chdir => 1,
             wanted   => sub {
                 return if -d $File::Find::name;
-                return if is_skippable_file($File::Find::name);
+                return
+                  if is_skippable_file(
+                    $File::Find::name);
                 push @files, $File::Find::name;
             },
         },
@@ -387,8 +421,11 @@ sub build_change_plan {
 
         my @new = transform_lines(@orig);
 
-        if ( @new != @orig || join( "", @new ) ne join( "", @orig ) ) {
-            push @planned, [ $f, join( "", @orig ), join( "", @new ) ];
+        if (   @new != @orig
+            || join( "", @new ) ne join( "", @orig ) )
+        {
+            push @planned,
+              [ $f, join( "", @orig ), join( "", @new ) ];
         }
     }
 
@@ -402,7 +439,13 @@ sub show_plan {
         last if $i >= 30;
         logi("PLAN: $planned[$i]->[0]");
     }
-    logi( "... and " . ( @planned - 30 ) . " more files" ) if @planned > 30;
+    if ( @planned > 30 ) {
+        logi(
+            "... and "
+              . ( @planned - 30 )
+              . " more files"
+        );
+    }
 }
 
 sub apply_changes {
@@ -412,18 +455,25 @@ sub apply_changes {
     for my $p (@planned) {
         my ( $file, $old, $new ) = @$p;
 
-        my $backup = "/var/backups" . $file . $backup_suffix;
-        my $bdir   = dirname($backup);
+        my $backup =
+          "/var/backups" . $file . $backup_suffix;
+        my $bdir = dirname($backup);
         unless ( -d $bdir ) {
             make_path($bdir) or do {
-                loge("ERROR: failed to create backup dir: $bdir: $!");
+                loge(
+                    "ERROR: failed to create"
+                      . " backup dir: $bdir: $!"
+                );
                 $errors++;
                 next;
             };
         }
 
         if ( !copy( $file, $backup ) ) {
-            loge("ERROR: failed to create backup: $file -> $backup: $!");
+            loge(
+                "ERROR: failed to create backup:"
+                  . " $file -> $backup: $!"
+            );
             $errors++;
             next;
         }
@@ -436,7 +486,9 @@ sub apply_changes {
         print {$out} $new;
         close $out;
 
-        logi("WROTE: $file (backup: $backup)") if $verbose;
+        if ($verbose) {
+            logi("WROTE: $file (backup: $backup)");
+        }
     }
 
     print "\nDone.\n";
@@ -458,7 +510,10 @@ sub main {
     show_plan(@planned);
 
     if ( !$apply ) {
-        logw("Dry-run only. Re-run with --apply to write changes.");
+        logw(
+            "Dry-run only."
+              . " Re-run with --apply to write changes."
+        );
         exit 2;
     }
 

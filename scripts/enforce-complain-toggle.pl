@@ -2,9 +2,9 @@
 
 # AppArmor enforce-complain toggle script
 #
-# Saves the list of profiles currently in enforce mode to a state file,
-# then switches them to complain mode. Can later restore the profiles
-# back to enforce mode using the saved state file.
+# Saves the list of profiles currently in enforce mode to a state
+# file, then switches them to complain mode. Can later restore the
+# profiles back to enforce mode using the saved state file.
 #
 # Usage:
 #   enforce-complain-toggle.pl [--state-file PATH] [--dry-run] downgrade
@@ -12,7 +12,8 @@
 #
 # Options:
 #   --state-file PATH   State file to save/read the list
-#                      (default: /var/lib/apparmor/enforce_to_complain.list)
+#                       (default: /var/lib/apparmor/
+#                        enforce_to_complain.list)
 #   --dry-run           Do not change anything; only print commands
 #   --help              Show this help
 #
@@ -45,9 +46,9 @@ if ($use_color) {
     $RESET  = "\e[0m";
 }
 
-sub logi { print "${GREEN}✅ [INFO]${RESET} $_[0]\n"; }
-sub logw { print STDERR "${YELLOW}⚠️  [WARN]${RESET} $_[0]\n"; }
-sub loge { print STDERR "${RED}❌ [ERROR]${RESET} $_[0]\n"; }
+sub logi { print "${GREEN}[INFO]${RESET} $_[0]\n"; }
+sub logw { print STDERR "${YELLOW}[WARN]${RESET} $_[0]\n"; }
+sub loge { print STDERR "${RED}[ERROR]${RESET} $_[0]\n"; }
 
 sub die_tool {
     my ($msg) = @_;
@@ -68,26 +69,34 @@ sub which {
 
 sub check_tools {
     for my $tool (qw(aa-complain aa-enforce)) {
-        loge("'$tool' is not in PATH. Please install 'apparmor-utils'.")
-          unless which($tool);
+        loge(
+            "'$tool' is not in PATH."
+              . " Please install 'apparmor-utils'."
+        ) unless which($tool);
     }
 }
 
 sub check_apparmor_available {
-    loge("$SYS_PROFILES does not exist. Is AppArmor enabled/loaded?")
-      unless -e $SYS_PROFILES;
+    loge(
+        "$SYS_PROFILES does not exist."
+          . " Is AppArmor enabled/loaded?"
+    ) unless -e $SYS_PROFILES;
 }
 
 sub require_root {
     my ($dry) = @_;
     return if $dry;
-    loge(
-"You must run as root (use sudo) to apply changes. Use --dry-run to simulate."
-    ) if $> != 0;
+    if ( $> != 0 ) {
+        loge(
+            "You must run as root (use sudo) to apply changes."
+              . " Use --dry-run to simulate."
+        );
+    }
 }
 
 sub parse_sys_profiles {
-    open my $fh, "<", $SYS_PROFILES or loge("Cannot read $SYS_PROFILES: $!");
+    open my $fh, "<", $SYS_PROFILES
+      or loge("Cannot read $SYS_PROFILES: $!");
     my %enforced;
 
     while ( my $line = <$fh> ) {
@@ -112,7 +121,8 @@ sub write_state_file {
 
     my ($dir) = $state_file =~ m|^(.*)/[^/]+$|;
     if ( defined $dir && $dir ne "" && !-d $dir ) {
-        make_path($dir) or loge("Cannot create directory $dir: $!");
+        make_path($dir)
+          or loge("Cannot create directory $dir: $!");
     }
 
     if ( -e $state_file ) {
@@ -122,12 +132,15 @@ sub write_state_file {
           . strftime( "%Y%m%d-%H%M%S", localtime );
         my $bdir = dirname($bak);
         if ( !-d $bdir ) {
-            make_path($bdir) or loge("Cannot create backup dir $bdir: $!");
+            make_path($bdir)
+              or loge("Cannot create backup dir $bdir: $!");
         }
-        copy( $state_file, $bak ) or loge("Cannot create backup $bak: $!");
+        copy( $state_file, $bak )
+          or loge("Cannot create backup $bak: $!");
     }
 
-    open my $out, ">", $state_file or loge("Cannot write $state_file: $!");
+    open my $out, ">", $state_file
+      or loge("Cannot write $state_file: $!");
     my $ts = strftime( "%Y-%m-%d %H:%M:%S", localtime );
 
     print $out "# AppArmor enforce->complain snapshot\n";
@@ -141,9 +154,12 @@ sub write_state_file {
 
 sub read_state_file {
     my ($state_file) = @_;
-    loge("State file does not exist: $state_file") unless -e $state_file;
+    unless ( -e $state_file ) {
+        loge("State file does not exist: $state_file");
+    }
 
-    open my $fh, "<", $state_file or loge("Cannot read $state_file: $!");
+    open my $fh, "<", $state_file
+      or loge("Cannot read $state_file: $!");
     my @profiles;
 
     while ( my $line = <$fh> ) {
@@ -163,14 +179,22 @@ sub run_cmd {
     my @cmd = @$cmd_ref;
 
     if ($dry) {
-        logi( "DRY-RUN: " . join( " ", map { /\s/ ? "'$_'" : $_ } @cmd ) );
+        logi(
+            "DRY-RUN: "
+              . join( " ",
+                map { /\s/ ? "'$_'" : $_ } @cmd )
+        );
         return 1;
     }
 
     system(@cmd);
 
     if ( $? == -1 ) {
-        logw( "FAIL: " . join( " ", @cmd ) . " :: failed to execute: $!" );
+        logw(
+            "FAIL: "
+              . join( " ", @cmd )
+              . " :: failed to execute: $!"
+        );
         return 0;
     }
     elsif ( $? & 127 ) {
@@ -186,7 +210,11 @@ sub run_cmd {
     else {
         my $rc = $? >> 8;
         if ( $rc != 0 ) {
-            logw( "FAIL: " . join( " ", @cmd ) . " :: exit $rc" );
+            logw(
+                "FAIL: "
+                  . join( " ", @cmd )
+                  . " :: exit $rc"
+            );
             return 0;
         }
     }
@@ -199,23 +227,32 @@ sub cmd_downgrade {
 
     my @enforced = parse_sys_profiles();
     if ( !@enforced ) {
-        logw("No profiles are currently in enforce mode. Nothing to do.");
+        logw(
+            "No profiles are currently in enforce mode."
+              . " Nothing to do."
+        );
         return 0;
     }
 
     write_state_file( $state_file, \@enforced );
-    logi(   "Saved enforce-mode profile list to: $state_file ("
+    logi(
+        "Saved enforce-mode profile list to: $state_file ("
           . scalar(@enforced)
-          . ") profiles" );
+          . ") profiles"
+    );
 
     my $ok = 0;
     for my $p (@enforced) {
         $ok++ if run_cmd( [ "aa-complain", $p ], $dry );
     }
 
-    logi( "Switched to complain: $ok/" . scalar(@enforced) );
+    logi(
+        "Switched to complain: $ok/" . scalar(@enforced) );
     if ( $ok != scalar(@enforced) ) {
-        logw("Some profiles could not be switched (see FAIL messages above).");
+        logw(
+            "Some profiles could not be switched"
+              . " (see FAIL messages above)."
+        );
         return 1;
     }
 
@@ -227,7 +264,8 @@ sub cmd_restore {
 
     my @to_restore = read_state_file($state_file);
     if ( !@to_restore ) {
-        logw("The saved list is empty. Nothing to restore.");
+        logw(
+            "The saved list is empty. Nothing to restore.");
         return 0;
     }
 
@@ -236,9 +274,14 @@ sub cmd_restore {
         $ok++ if run_cmd( [ "aa-enforce", $p ], $dry );
     }
 
-    logi( "Restored to enforce: $ok/" . scalar(@to_restore) );
+    logi(
+        "Restored to enforce: $ok/"
+          . scalar(@to_restore) );
     if ( $ok != scalar(@to_restore) ) {
-        logw("Some profiles could not be restored (see FAIL messages above).");
+        logw(
+            "Some profiles could not be restored"
+              . " (see FAIL messages above)."
+        );
         return 1;
     }
 
@@ -253,8 +296,10 @@ Usage:
 
 Options:
   --state-file PATH   State file to save/read the list
-                      (default: /var/lib/apparmor/enforce_to_complain.list)
-  --dry-run           Do not change anything; only print commands
+                       (default: /var/lib/apparmor/
+                        enforce_to_complain.list)
+  --dry-run           Do not change anything;
+                       only print commands
   --help              Show this help
 
 USAGE
@@ -277,7 +322,8 @@ sub parse_args {
 
 sub parse_command {
     my $cmd = shift @ARGV // "";
-    usage() unless $cmd eq "downgrade" || $cmd eq "restore";
+    usage()
+      unless $cmd eq "downgrade" || $cmd eq "restore";
     return $cmd;
 }
 
@@ -289,7 +335,9 @@ sub check_prereqs {
 
 sub run_command {
     my ($cmd) = @_;
-    return cmd_downgrade( $state_file, $dry_run ) if $cmd eq "downgrade";
+    if ($cmd eq "downgrade") {
+        return cmd_downgrade( $state_file, $dry_run );
+    }
     return cmd_restore( $state_file, $dry_run );
 }
 
