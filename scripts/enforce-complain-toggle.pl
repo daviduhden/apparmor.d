@@ -69,28 +69,22 @@ sub which {
 
 sub check_tools {
     for my $tool (qw(aa-complain aa-enforce)) {
-        loge(
-            "'$tool' is not in PATH."
-              . " Please install 'apparmor-utils'."
-        ) unless which($tool);
+        loge( "'$tool' is not in PATH." . " Please install 'apparmor-utils'." )
+          unless which($tool);
     }
 }
 
 sub check_apparmor_available {
-    loge(
-        "$SYS_PROFILES does not exist."
-          . " Is AppArmor enabled/loaded?"
-    ) unless -e $SYS_PROFILES;
+    loge( "$SYS_PROFILES does not exist." . " Is AppArmor enabled/loaded?" )
+      unless -e $SYS_PROFILES;
 }
 
 sub require_root {
     my ($dry) = @_;
     return if $dry;
     if ( $> != 0 ) {
-        loge(
-            "You must run as root (use sudo) to apply changes."
-              . " Use --dry-run to simulate."
-        );
+        loge(   "You must run as root (use sudo) to apply changes."
+              . " Use --dry-run to simulate." );
     }
 }
 
@@ -179,22 +173,14 @@ sub run_cmd {
     my @cmd = @$cmd_ref;
 
     if ($dry) {
-        logi(
-            "DRY-RUN: "
-              . join( " ",
-                map { /\s/ ? "'$_'" : $_ } @cmd )
-        );
+        logi( "DRY-RUN: " . join( " ", map { /\s/ ? "'$_'" : $_ } @cmd ) );
         return 1;
     }
 
     system(@cmd);
 
     if ( $? == -1 ) {
-        logw(
-            "FAIL: "
-              . join( " ", @cmd )
-              . " :: failed to execute: $!"
-        );
+        logw( "FAIL: " . join( " ", @cmd ) . " :: failed to execute: $!" );
         return 0;
     }
     elsif ( $? & 127 ) {
@@ -210,11 +196,7 @@ sub run_cmd {
     else {
         my $rc = $? >> 8;
         if ( $rc != 0 ) {
-            logw(
-                "FAIL: "
-                  . join( " ", @cmd )
-                  . " :: exit $rc"
-            );
+            logw( "FAIL: " . join( " ", @cmd ) . " :: exit $rc" );
             return 0;
         }
     }
@@ -228,31 +210,24 @@ sub cmd_downgrade {
     my @enforced = parse_sys_profiles();
     if ( !@enforced ) {
         logw(
-            "No profiles are currently in enforce mode."
-              . " Nothing to do."
-        );
+            "No profiles are currently in enforce mode." . " Nothing to do." );
         return 0;
     }
 
     write_state_file( $state_file, \@enforced );
-    logi(
-        "Saved enforce-mode profile list to: $state_file ("
+    logi(   "Saved enforce-mode profile list to: $state_file ("
           . scalar(@enforced)
-          . ") profiles"
-    );
+          . ") profiles" );
 
     my $ok = 0;
     for my $p (@enforced) {
         $ok++ if run_cmd( [ "aa-complain", $p ], $dry );
     }
 
-    logi(
-        "Switched to complain: $ok/" . scalar(@enforced) );
+    logi( "Switched to complain: $ok/" . scalar(@enforced) );
     if ( $ok != scalar(@enforced) ) {
-        logw(
-            "Some profiles could not be switched"
-              . " (see FAIL messages above)."
-        );
+        logw(   "Some profiles could not be switched"
+              . " (see FAIL messages above)." );
         return 1;
     }
 
@@ -264,8 +239,7 @@ sub cmd_restore {
 
     my @to_restore = read_state_file($state_file);
     if ( !@to_restore ) {
-        logw(
-            "The saved list is empty. Nothing to restore.");
+        logw("The saved list is empty. Nothing to restore.");
         return 0;
     }
 
@@ -274,14 +248,10 @@ sub cmd_restore {
         $ok++ if run_cmd( [ "aa-enforce", $p ], $dry );
     }
 
-    logi(
-        "Restored to enforce: $ok/"
-          . scalar(@to_restore) );
+    logi( "Restored to enforce: $ok/" . scalar(@to_restore) );
     if ( $ok != scalar(@to_restore) ) {
-        logw(
-            "Some profiles could not be restored"
-              . " (see FAIL messages above)."
-        );
+        logw(   "Some profiles could not be restored"
+              . " (see FAIL messages above)." );
         return 1;
     }
 
@@ -335,7 +305,7 @@ sub check_prereqs {
 
 sub run_command {
     my ($cmd) = @_;
-    if ($cmd eq "downgrade") {
+    if ( $cmd eq "downgrade" ) {
         return cmd_downgrade( $state_file, $dry_run );
     }
     return cmd_restore( $state_file, $dry_run );

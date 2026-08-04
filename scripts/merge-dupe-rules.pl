@@ -68,7 +68,7 @@ sub die_tool {
 # Options
 # -------------------------
 my $policy_dir    = "/etc/apparmor.d";
-my $apply         = 0;       # default: dry-run
+my $apply         = 0;                   # default: dry-run
 my $backup_suffix = "";
 my $verbose       = 0;
 
@@ -112,10 +112,7 @@ sub split_comment {
         my $ch = substr( $line, $i, 1 );
         $in_quote = !$in_quote if $ch eq '"';
         if ( $ch eq '#' && !$in_quote ) {
-            return (
-                substr( $line, 0, $i ),
-                substr( $line, $i )
-            );
+            return ( substr( $line, 0, $i ), substr( $line, $i ) );
         }
     }
     return ( $line, "" );
@@ -164,8 +161,7 @@ sub is_skippable_file {
     my ($path) = @_;
     return 1 if $path =~ m{/(?:cache|\.cache)/};
     return 1
-      if $path =~
-        /\.(?:swp|bak|dpkg-old|dpkg-dist|rpmnew|rpmsave)$/;
+      if $path =~ /\.(?:swp|bak|dpkg-old|dpkg-dist|rpmnew|rpmsave)$/;
     return 1 if $path =~ /~$/;
     return 0;
 }
@@ -180,13 +176,12 @@ sub parse_file_rule {
 
     return undef if $raw =~ /->/;    # avoid rename/link
     return undef
-      if $raw !~ /,\s*$/;    # need trailing comma
+      if $raw !~ /,\s*$/;            # need trailing comma
     return undef if $raw =~ /^\s*(?:include|#include)\b/i;
 
     # reject obvious non-path rule starters
     return undef
-      if $raw =~
-        m{^\s*(?:dbus|capability|network|mount|signal|
+      if $raw =~ m{^\s*(?:dbus|capability|network|mount|signal|
           ptrace|unix|change_profile|profile)\b}ix;
 
     my ($indent) = ( $raw =~ /^(\s*)/ );
@@ -217,7 +212,7 @@ sub parse_file_rule {
     $path_check =~ s/^"//;    # if quoted
     return undef
       unless $path_check =~ m{^/}
-        || $path_check =~ m{^\@\{} ;
+      || $path_check =~ m{^\@\{};
 
     # perms until trailing comma
     $body =~ s/,\s*$//;
@@ -248,7 +243,7 @@ sub make_rule_line {
     $lhs = normalize_ws($lhs);
 
     my $line = $indent . $lhs . " " . $perms . ",";
-    if (defined($comment) && $comment ne "") {
+    if ( defined($comment) && $comment ne "" ) {
         $line .= " " . $comment;
     }
     return $line;
@@ -269,8 +264,9 @@ sub transform_lines {
     my %pending_seen;
     my $pending_comment = "";
     my $pending_nl      = "\n";
+
     # blank/comment-only lines between duplicates
-    my @gap             = ();
+    my @gap = ();
 
     my $flush = sub {
         return unless $pending;
@@ -383,8 +379,7 @@ sub prepare_options {
       };
 
     if ( !$backup_suffix ) {
-        my $ts =
-          strftime( "%Y%m%d-%H%M%S", localtime() );
+        my $ts = strftime( "%Y%m%d-%H%M%S", localtime() );
         $backup_suffix = ".bak.$ts";
     }
 }
@@ -397,8 +392,7 @@ sub collect_policy_files {
             wanted   => sub {
                 return if -d $File::Find::name;
                 return
-                  if is_skippable_file(
-                    $File::Find::name);
+                  if is_skippable_file($File::Find::name);
                 push @files, $File::Find::name;
             },
         },
@@ -421,11 +415,10 @@ sub build_change_plan {
 
         my @new = transform_lines(@orig);
 
-        if (   @new != @orig
+        if ( @new != @orig
             || join( "", @new ) ne join( "", @orig ) )
         {
-            push @planned,
-              [ $f, join( "", @orig ), join( "", @new ) ];
+            push @planned, [ $f, join( "", @orig ), join( "", @new ) ];
         }
     }
 
@@ -440,11 +433,7 @@ sub show_plan {
         logi("PLAN: $planned[$i]->[0]");
     }
     if ( @planned > 30 ) {
-        logi(
-            "... and "
-              . ( @planned - 30 )
-              . " more files"
-        );
+        logi( "... and " . ( @planned - 30 ) . " more files" );
     }
 }
 
@@ -455,25 +444,18 @@ sub apply_changes {
     for my $p (@planned) {
         my ( $file, $old, $new ) = @$p;
 
-        my $backup =
-          "/var/backups" . $file . $backup_suffix;
-        my $bdir = dirname($backup);
+        my $backup = "/var/backups" . $file . $backup_suffix;
+        my $bdir   = dirname($backup);
         unless ( -d $bdir ) {
             make_path($bdir) or do {
-                loge(
-                    "ERROR: failed to create"
-                      . " backup dir: $bdir: $!"
-                );
+                loge( "ERROR: failed to create" . " backup dir: $bdir: $!" );
                 $errors++;
                 next;
             };
         }
 
         if ( !copy( $file, $backup ) ) {
-            loge(
-                "ERROR: failed to create backup:"
-                  . " $file -> $backup: $!"
-            );
+            loge( "ERROR: failed to create backup:" . " $file -> $backup: $!" );
             $errors++;
             next;
         }
@@ -510,10 +492,7 @@ sub main {
     show_plan(@planned);
 
     if ( !$apply ) {
-        logw(
-            "Dry-run only."
-              . " Re-run with --apply to write changes."
-        );
+        logw( "Dry-run only." . " Re-run with --apply to write changes." );
         exit 2;
     }
 
