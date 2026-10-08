@@ -139,7 +139,7 @@ sub decompose_perms {
     my $exec;
 
     for my $tok ( grep { length } split( /\s+/, $perm_str ) ) {
-        my $rest      = $tok;
+        my $rest = $tok;
         my $this_exec;
 
         for my $spec (@EXEC_SPECS) {
@@ -202,7 +202,7 @@ sub is_skippable_file {
     return 1 if $path =~ m{/(?:cache|\.cache)/};
     return 1
       if $path =~
-      /\.(?:swp|bak|orig|rej|dpkg-(?:old|new|dist|tmp|bak)|rpm(?:new|save|orig)|pac(?:save|new)|ucf-(?:old|new|dist))$/;
+/\.(?:swp|bak|orig|rej|dpkg-(?:old|new|dist|tmp|bak)|rpm(?:new|save|orig)|pac(?:save|new)|ucf-(?:old|new|dist))$/;
     return 1 if $path =~ /~$/;
     return 0;
 }
@@ -386,7 +386,8 @@ sub transform_lines {
 
             # Canonicalize the permission string when possible; leave it
             # untouched when it cannot be parsed safely (e.g. bare 'x').
-            $rule->{perms} = merge_perms( $rule->{perms}, "" ) // $rule->{perms};
+            $rule->{perms} = merge_perms( $rule->{perms}, "" )
+              // $rule->{perms};
 
             $pending         = $rule;
             $pending_comment = $comment // "";
@@ -438,6 +439,7 @@ sub collect_policy_files {
             no_chdir => 1,
             wanted   => sub {
                 return if -d $File::Find::name;
+
                 # Never rewrite through a symlink (e.g. the files linked
                 # from /etc/apparmor.d/disable), which would modify the
                 # symlink target.

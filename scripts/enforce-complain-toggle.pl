@@ -58,7 +58,8 @@ sub which {
 
 sub check_tools {
     for my $tool (qw(aa-complain aa-enforce)) {
-        die_tool( "'$tool' is not in PATH." . " Please install 'apparmor-utils'." )
+        die_tool(
+            "'$tool' is not in PATH." . " Please install 'apparmor-utils'." )
           unless which($tool);
     }
 }
@@ -72,8 +73,8 @@ sub require_root {
     my ($dry) = @_;
     return if $dry;
     if ( $> != 0 ) {
-        die_tool(   "You must run as root (use sudo) to apply changes."
-                  . " Use --dry-run to simulate." );
+        die_tool( "You must run as root (use sudo) to apply changes."
+              . " Use --dry-run to simulate." );
     }
 }
 
@@ -109,6 +110,7 @@ sub write_state_file {
     }
 
     if ( -e $state_file ) {
+
         # Strip leading '/' and './' so both absolute and relative state
         # paths produce a sane backup path under /var/backups.
         my $rel = $state_file;
