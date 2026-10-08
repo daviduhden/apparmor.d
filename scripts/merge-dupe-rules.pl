@@ -60,8 +60,11 @@ my $policy_dir    = "/etc/apparmor.d";
 my $apply         = 0;                   # default: dry-run
 my $backup_suffix = "";
 my $verbose       = 0;
+my $help          = 0;
 
 sub usage {
+    my ($code) = @_;
+    $code = 2 unless defined $code;
     print STDERR <<"USAGE";
 Usage:
   $0 [--policy-dir DIR] [--apply] \\
@@ -88,7 +91,7 @@ Exit codes:
    2 Changes would be made (dry-run) or some files
      could not be processed
 USAGE
-    exit 2;
+    exit $code;
 }
 
 # -------------------------
@@ -114,45 +117,105 @@ sub normalize_ws {
     return $s;
 }
 
-sub perm_atoms {
+# Longest-first list of AppArmor exec qualifiers.
+# Note: the bare 'x' qualifier is intentionally omitted. It is only valid
+# with 'deny' and cannot be combined with base permissions, so rules that
+# use it are never merged (and thus never rewritten into an invalid rule).
+my @EXEC_SPECS = qw(
+  pix Pix cix Cix pux PUx cux CUx
+  ix Ix ux Ux px Px cx Cx
+);
+
+# Decompose an AppArmor file permission string into its base permissions
+# and at most one exec qualifier. Returns (\%base, $exec). On conflicting
+# exec qualifiers or unparseable input returns (undef, undef) so the caller
+# leaves the rule untouched.
+sub decompose_perms {
     my ($perm_str) = @_;
     $perm_str //= "";
     $perm_str =~ s/,/ /g;
-    $perm_str = normalize_ws($perm_str);
 
-    my @atoms;
-    my %seen;
+    my %base;
+    my $exec;
 
     for my $tok ( grep { length } split( /\s+/, $perm_str ) ) {
+        my $rest      = $tok;
+        my $this_exec;
 
-        # If token ends with 'x' and is longer than 1,
-        # treat as an exec-mode token (ix/px/cx/Ux/...)
-        if ( length($tok) > 1 && $tok =~ /x$/i ) {
-            push @atoms, $tok unless $seen{$tok}++;
-            next;
+        for my $spec (@EXEC_SPECS) {
+            my $idx = index( $rest, $spec );
+            next if $idx < 0;
+
+            my $candidate = $rest;
+            substr( $candidate, $idx, length($spec) ) = "";
+            if ( $candidate =~ /^[rwalmk]*$/i ) {
+                $this_exec = $spec;
+                $rest      = $candidate;
+                last;
+            }
         }
 
-        # Otherwise split into single letters (rwkmll etc.)
-        for my $ch ( split( //, $tok ) ) {
-            next if $ch =~ /\s/;
-            push @atoms, $ch unless $seen{$ch}++;
+        # No exec qualifier found: the whole token must be base perms.
+        if ( !$this_exec && $rest =~ /[^rwalmk]/i ) {
+            return ( undef, undef );
         }
+
+        if ( defined $this_exec ) {
+            return ( undef, undef )
+              if defined $exec && $exec ne $this_exec;
+            $exec = $this_exec;
+        }
+
+        $base{ lc($_) } = 1 for split //, $rest;
     }
-    return @atoms;
+
+    return ( \%base, $exec );
 }
 
-sub join_atoms {
-    my (@atoms) = @_;
-    return join( "", @atoms );
+# Merge two permission strings, returning a canonical permission string or
+# undef when they cannot be merged safely (for example conflicting exec
+# qualifiers). Because 'w' already implies 'a' in AppArmor, a union that
+# contains both is rendered as 'w'.
+sub merge_perms {
+    my ( $a, $b ) = @_;
+
+    my ( $base_a, $exec_a ) = decompose_perms($a);
+    my ( $base_b, $exec_b ) = decompose_perms($b);
+    return undef unless defined $base_a && defined $base_b;
+
+    return undef
+      if defined $exec_a && defined $exec_b && $exec_a ne $exec_b;
+
+    my $exec = defined $exec_a ? $exec_a : $exec_b;
+
+    my %base = ( %$base_a, %$base_b );
+    delete $base{a} if $base{w};
+
+    my $merged = join( "", grep { $base{$_} } split //, "rwalmk" );
+    $merged .= $exec if defined $exec;
+
+    return $merged eq "" ? undef : $merged;
 }
 
 sub is_skippable_file {
     my ($path) = @_;
     return 1 if $path =~ m{/(?:cache|\.cache)/};
     return 1
-      if $path =~ /\.(?:swp|bak|dpkg-old|dpkg-dist|rpmnew|rpmsave)$/;
+      if $path =~
+      /\.(?:swp|bak|orig|rej|dpkg-(?:old|new|dist|tmp|bak)|rpm(?:new|save|orig)|pac(?:save|new)|ucf-(?:old|new|dist))$/;
     return 1 if $path =~ /~$/;
     return 0;
+}
+
+# Build the backup path for a policy file, handling both absolute and
+# relative paths without producing malformed paths such as
+# "/var/backupsrelative/file".
+sub backup_path {
+    my ( $file, $suffix ) = @_;
+    my $rel = $file;
+    $rel =~ s{^/+}{};
+    $rel =~ s{^\./+}{};
+    return "/var/backups/" . $rel . $suffix;
 }
 
 # Parse a *simple* AppArmor file rule:
@@ -246,34 +309,29 @@ sub transform_lines {
 
     my @out;
 
-    # hashref from parse_file_rule + merged atoms,
-    # comment, newline
+    # pending merged rule (hashref), comment, newline
     my $pending;
-    my @pending_atoms;
-    my %pending_seen;
-    my $pending_comment = "";
-    my $pending_nl      = "\n";
 
     # blank/comment-only lines between duplicates
     my @gap = ();
 
+    my $pending_comment = "";
+    my $pending_nl      = "\n";
+
     my $flush = sub {
         return unless $pending;
 
-        my $perms  = join_atoms(@pending_atoms);
         my $merged = make_rule_line(
             indent  => $pending->{indent},
             qual    => $pending->{qual},
             path    => $pending->{path},
-            perms   => $perms,
+            perms   => $pending->{perms},
             comment => $pending_comment,
         );
         push @out, $merged . $pending_nl;
         push @out, @gap if @gap;
 
         $pending         = undef;
-        @pending_atoms   = ();
-        %pending_seen    = ();
         $pending_comment = "";
         $pending_nl      = "\n";
         @gap             = ();
@@ -303,36 +361,34 @@ sub transform_lines {
 
         my $rule = parse_file_rule($trimmed);
         if ($rule) {
-            if (   $pending
-                && $rule->{key} eq $pending->{key} )
-            {
+            if ( $pending && $rule->{key} eq $pending->{key} ) {
 
-                # merge permissions
-                for my $a ( perm_atoms( $rule->{perms} ) ) {
-                    next if $pending_seen{$a}++;
-                    push @pending_atoms, $a;
+                # Only merge when the permission sets are compatible
+                # (single, matching exec qualifier). Otherwise fall
+                # through and keep the rules as separate entries.
+                my $merged = merge_perms( $pending->{perms}, $rule->{perms} );
+                if ( defined $merged ) {
+                    $pending->{perms} = $merged;
+
+                    # keep first comment; adopt new one if
+                    # first is empty
+                    if ( !$pending_comment && $comment ) {
+                        $pending_comment = $comment;
+                    }
+
+                    # keep newline style from first in run
+                    next;
                 }
-
-                # keep first comment; adopt new one if
-                # first is empty
-                if ( !$pending_comment && $comment ) {
-                    $pending_comment = $comment;
-                }
-
-                # keep newline style from first in run
-                next;
             }
 
             # new rule starts -> flush previous run
             $flush->() if $pending;
 
-            $pending       = $rule;
-            @pending_atoms = ();
-            %pending_seen  = ();
-            for my $a ( perm_atoms( $rule->{perms} ) ) {
-                next if $pending_seen{$a}++;
-                push @pending_atoms, $a;
-            }
+            # Canonicalize the permission string when possible; leave it
+            # untouched when it cannot be parsed safely (e.g. bare 'x').
+            $rule->{perms} = merge_perms( $rule->{perms}, "" ) // $rule->{perms};
+
+            $pending         = $rule;
             $pending_comment = $comment // "";
             $pending_nl      = $nl;
             @gap             = ();
@@ -357,7 +413,9 @@ sub parse_args {
         "apply!"          => \$apply,
         "backup-suffix=s" => \$backup_suffix,
         "verbose!"        => \$verbose,
+        "h|help!"         => \$help,
     ) or usage();
+    usage(0) if $help;
 }
 
 sub prepare_options {
@@ -380,6 +438,10 @@ sub collect_policy_files {
             no_chdir => 1,
             wanted   => sub {
                 return if -d $File::Find::name;
+                # Never rewrite through a symlink (e.g. the files linked
+                # from /etc/apparmor.d/disable), which would modify the
+                # symlink target.
+                return if -l $File::Find::name;
                 return
                   if is_skippable_file($File::Find::name);
                 push @files, $File::Find::name;
@@ -433,7 +495,7 @@ sub apply_changes {
     for my $p (@planned) {
         my ( $file, $old, $new ) = @$p;
 
-        my $backup = "/var/backups" . $file . $backup_suffix;
+        my $backup = backup_path( $file, $backup_suffix );
         my $bdir   = dirname($backup);
         unless ( -d $bdir ) {
             make_path($bdir) or do {
@@ -449,13 +511,35 @@ sub apply_changes {
             next;
         }
 
-        open my $out, ">", $file or do {
-            loge("ERROR: failed to write $file: $!");
+        # Write to a temporary file first and rename it into place so a
+        # failure cannot leave a truncated/empty policy behind.
+        my ( $mode, $uid, $gid ) = ( stat($file) )[ 2, 4, 5 ];
+        my $tmpfile = "$file.merge-dupe.$$";
+
+        open my $out, ">", $tmpfile or do {
+            loge("ERROR: failed to write $tmpfile: $!");
             $errors++;
             next;
         };
         print {$out} $new;
-        close $out;
+        unless ( close $out ) {
+            loge("ERROR: failed to write $tmpfile: $!");
+            unlink $tmpfile;
+            $errors++;
+            next;
+        }
+
+        if ( defined $mode ) {
+            chmod $mode & 07777, $tmpfile;
+            chown $uid, $gid, $tmpfile;    # best effort
+        }
+
+        if ( !rename $tmpfile, $file ) {
+            loge("ERROR: failed to replace $file: $!");
+            unlink $tmpfile;
+            $errors++;
+            next;
+        }
 
         if ($verbose) {
             logi("WROTE: $file (backup: $backup)");

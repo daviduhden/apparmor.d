@@ -15,7 +15,6 @@ profile fail2ban-server /{usr/,usr/local/}bin/fail2ban-server flags=(attach_disc
   include <abstractions/nameservice>
   include <abstractions/python>
   include <abstractions/ssl_certs>
-  include if exists <local/usr.bin.fail2ban-server>
 
   capability net_admin,
 
@@ -107,4 +106,7 @@ profile fail2ban-server /{usr/,usr/local/}bin/fail2ban-server flags=(attach_disc
   /{sbin,usr/sbin,usr/local/sbin}/ip6tables ix,
   /{sbin,usr/sbin,usr/local/sbin}/nft ix,
   /{sbin,usr/sbin,usr/local/sbin}/xtables-nft-multi ix,
+
+  # Local overrides
+  include if exists <local/usr.bin.fail2ban-server>
 }

@@ -37,9 +37,8 @@ profile monero-lws-daemon /{usr/,}bin/monero-lws-daemon flags=(attach_disconnect
   network inet tcp,
   network inet6 tcp,
 
-  # Executable and shared libraries
+  # Executable (shared libraries are provided by abstractions/base)
   /{usr/,}bin/monero-lws-daemon Px,
-  /{usr/,}lib/** mr,
 
   # Local overrides
   include if exists <local/usr.bin.monero-lws-daemon>

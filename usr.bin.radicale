@@ -53,9 +53,14 @@ profile radicale /{usr/,}bin/radicale flags=(attach_disconnected, enforce, media
   /etc/radicale/rights r,
   /etc/radicale/users r,
 
-  # Runtime data and logs
-  # Runtime collections (read/write) and log files.
+  # Runtime data, cache and logs
+  # Runtime collections (read/write), optional file cache and log files.
+  /var/lib/radicale/ r,
+  /var/lib/radicale/collections/ rw,
   /var/lib/radicale/collections/** rwk,
+  /var/cache/radicale/ rw,
+  /var/cache/radicale/** rwk,
+  /var/log/radicale/ rw,
   /var/log/radicale/** rw,
 
   # Sockets and runtime state 
@@ -63,23 +68,22 @@ profile radicale /{usr/,}bin/radicale flags=(attach_disconnected, enforce, media
   /{,var/}run/radicale/** rw,
 
   # Executables and interpreter access
-  # Allow access to installed binaries and the Python interpreter used.
-  /{usr/,}bin/ r,
-  /{usr/,}bin/** r,
-  /{usr/,}bin/python3 px,
+  # The profile is attached to /usr/bin/radicale, a Python script, so the
+  # interpreter must be executable. pix transitions to a dedicated python
+  # profile when one exists and otherwise keeps this profile (ix fallback),
+  # without scrubbing the environment. Python module/cache paths are already
+  # covered by abstractions/python, so no broad extra rules are needed here.
+  /{usr/,}bin/python3 pix,
   /{usr/,}bin/radicale mrpx,
-  /{usr/,}lib/python*/** px,
 
-  # Deny or restrict build tool execution (mitigation)
-  # Deny execution of certain toolchains by restricting mrix rules to prevent
-  # easy compilation/linking from an exploited process. These are present
-  # to reduce post-exploitation RCE risks without breaking legitimate
-  # package-managed uses on the host.
-  /usr/bin/aarch64-linux-gnu-gcc-14 mrix,
-  /usr/bin/aarch64-linux-gnu-ld.bfd mrix,
-  /usr/libexec/gcc/aarch64-linux-gnu/14/collect2 mrix,
-  /usr/libexec/gcc/aarch64-linux-gnu/14/liblto_plugin.so mrix,
-  /usr/sbin/ldconfig mrix,
+  # Hardening: deny execution of compilers/linkers so an exploited process
+  # cannot build new executables. These denies grant no access and always
+  # take precedence over allow rules. A bare 'x' is only valid with 'deny'.
+  deny /usr/bin/aarch64-linux-gnu-gcc-14 x,
+  deny /usr/bin/aarch64-linux-gnu-ld.bfd x,
+  deny /usr/libexec/gcc/aarch64-linux-gnu/14/collect2 x,
+  deny /usr/libexec/gcc/aarch64-linux-gnu/14/liblto_plugin.so x,
+  deny /usr/sbin/ldconfig x,
 
   # Local overrides
   include if exists <local/usr.bin.radicale>

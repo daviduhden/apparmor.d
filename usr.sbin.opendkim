@@ -25,11 +25,15 @@ profile opendkim /{usr/,}sbin/opendkim flags=(attach_disconnected, enforce, medi
   # Sockets and runtime state 
   /{,var/}run/opendkim/opendkim.sock rw,
   /var/spool/postfix/opendkim.sock rw,
+  /var/spool/postfix/opendkim/opendkim.sock rw,
   /{,var/}run/opendkim/opendkim.pid rw,
   /{,var/}run/opendkim/** rw,
   /var/lib/opendkim/** rw,
 
-  # DKIM keyrings and Postfix integration
+  # DKIM keyrings and Postfix integration. /etc/dkimkeys is the Debian
+  # default key directory, /etc/postfix/dkim is the Postfix-style layout.
+  /etc/dkimkeys/ r,
+  /etc/dkimkeys/** r,
   /etc/postfix/dkim/ r,
   /etc/postfix/dkim/** r,
   /etc/postfix/dkim/keytable r,

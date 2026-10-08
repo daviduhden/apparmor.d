@@ -71,9 +71,8 @@ profile xd-torrent /{usr/,usr/local/}bin/{XD,xd-torrent} flags=(attach_disconnec
   owner @{HOME}/.cache/xd-torrent/ rw,
   owner @{HOME}/.cache/xd-torrent/** rwk,
 
-  # Executable and libs
+  # Executable (shared libraries are provided by abstractions/base)
   /{usr/,usr/local/}bin/{XD,xd-torrent} Px,
-  /{usr/,}lib/** mr,
 
   # Local overrides
   include if exists <local/usr.bin.xd-torrent>

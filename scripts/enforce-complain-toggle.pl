@@ -58,13 +58,13 @@ sub which {
 
 sub check_tools {
     for my $tool (qw(aa-complain aa-enforce)) {
-        loge( "'$tool' is not in PATH." . " Please install 'apparmor-utils'." )
+        die_tool( "'$tool' is not in PATH." . " Please install 'apparmor-utils'." )
           unless which($tool);
     }
 }
 
 sub check_apparmor_available {
-    loge( "$SYS_PROFILES does not exist." . " Is AppArmor enabled/loaded?" )
+    die_tool( "$SYS_PROFILES does not exist." . " Is AppArmor enabled/loaded?" )
       unless -e $SYS_PROFILES;
 }
 
@@ -72,8 +72,8 @@ sub require_root {
     my ($dry) = @_;
     return if $dry;
     if ( $> != 0 ) {
-        loge(   "You must run as root (use sudo) to apply changes."
-              . " Use --dry-run to simulate." );
+        die_tool(   "You must run as root (use sudo) to apply changes."
+                  . " Use --dry-run to simulate." );
     }
 }
 
@@ -105,25 +105,30 @@ sub write_state_file {
     my ($dir) = $state_file =~ m|^(.*)/[^/]+$|;
     if ( defined $dir && $dir ne "" && !-d $dir ) {
         make_path($dir)
-          or loge("Cannot create directory $dir: $!");
+          or die_tool("Cannot create directory $dir: $!");
     }
 
     if ( -e $state_file ) {
+        # Strip leading '/' and './' so both absolute and relative state
+        # paths produce a sane backup path under /var/backups.
+        my $rel = $state_file;
+        $rel =~ s{^/+}{};
+        $rel =~ s{^\./+}{};
         my $bak =
-            "/var/backups"
-          . $state_file . ".bak."
+            "/var/backups/"
+          . $rel . ".bak."
           . strftime( "%Y%m%d-%H%M%S", localtime );
         my $bdir = dirname($bak);
         if ( !-d $bdir ) {
             make_path($bdir)
-              or loge("Cannot create backup dir $bdir: $!");
+              or die_tool("Cannot create backup dir $bdir: $!");
         }
         copy( $state_file, $bak )
-          or loge("Cannot create backup $bak: $!");
+          or die_tool("Cannot create backup $bak: $!");
     }
 
     open my $out, ">", $state_file
-      or loge("Cannot write $state_file: $!");
+      or die_tool("Cannot write $state_file: $!");
     my $ts = strftime( "%Y-%m-%d %H:%M:%S", localtime );
 
     print $out "# AppArmor enforce->complain snapshot\n";
@@ -138,11 +143,11 @@ sub write_state_file {
 sub read_state_file {
     my ($state_file) = @_;
     unless ( -e $state_file ) {
-        loge("State file does not exist: $state_file");
+        die_tool("State file does not exist: $state_file");
     }
 
     open my $fh, "<", $state_file
-      or loge("Cannot read $state_file: $!");
+      or die_tool("Cannot read $state_file: $!");
     my @profiles;
 
     while ( my $line = <$fh> ) {

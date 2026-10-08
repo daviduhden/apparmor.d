@@ -11,6 +11,7 @@
   # Standard includes 
   include <abstractions/base>
   include <abstractions/nameservice>
+  include <abstractions/openssl>
 
   # Network transports
   # Allow IPv4/IPv6 stream and UDP transports used by Tor and transports.

@@ -42,16 +42,37 @@ make help
 ```
 
 Important variables
-- `PREFIX`: installation prefix (default: `/usr`).
+- `PREFIX`: prefix for helper scripts (default: `/usr`, giving `/usr/local/bin`).
+  It does not affect profiles, which are always installed under `/etc/apparmor.d`.
 - `DESTDIR`: temporary installation root for packaging.
-- `BINDIR`: helper script destination (default: `$(DESTDIR)$(PREFIX)/usr/local/bin`).
+- `BINDIR`: helper script destination (default: `$(DESTDIR)$(PREFIX)/local/bin`).
+- `DIVERT`: use `dpkg-divert` to displace distro copies of replaced files
+  (default: `yes`, but automatically `no` when `DESTDIR` is set).
+- `DIVERT_DIR`: where diverted distro files are kept (default:
+  `$(APPARMOR_DIR)/distrib`, a subdirectory the loader ignores).
 - `APPARMOR_PARSER`: path to `apparmor_parser` (required for `make load` and `make check`).
 
 What `make install` does
-- Creates `$(DESTDIR)$(PREFIX)/etc/apparmor.d/abstractions/` and copies `abstractions/tor`.
-- Copies the listed profiles into `$(DESTDIR)$(PREFIX)/etc/apparmor.d/`.
-- Creates empty stub files in `$(DESTDIR)$(PREFIX)/etc/apparmor.d/local/` for each profile (if missing).
+- Creates `$(DESTDIR)/etc/apparmor.d/abstractions/` and copies `abstractions/tor`.
+- Diverts the distro copies of the files this repo also ships
+  (`usr.bin.i2pd`, `system_tor`, `abstractions/tor`) with `dpkg-divert` into
+  `$(DIVERT_DIR)` (default `/etc/apparmor.d/distrib`), then installs the
+  repository versions in the canonical paths. This keeps `apt` upgrades from
+  overwriting the profiles and preserves the originals.
+- Copies the listed profiles into `$(DESTDIR)/etc/apparmor.d/`.
+- Creates empty stub files in `$(DESTDIR)/etc/apparmor.d/local/` for each profile (if missing).
 - Installs `enforce-complain-toggle` and `merge-dupe-rules` into `$(BINDIR)`.
+
+`make uninstall` removes the repository files and removes the diversions,
+restoring the distro files. Diversions are skipped when `DESTDIR` is set
+(packaging); set `DIVERT=no` to disable them explicitly.
+
+Because Debian's `tor@default.service` asks for the `system_tor` profile and
+that file is diverted away, the shipped `tor` profile (attached to
+`/usr/bin/tor` and `/usr/sbin/tor`) is the one applied.
+
+`make check` runs unprivileged: it compiles the profiles in a temporary
+directory and treats parser warnings as errors (`--Werror`).
 
 Notes
 - `make load` invokes `apparmor_parser` with the configured flags; it will error if the parser is not installed.

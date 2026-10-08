@@ -11,13 +11,20 @@ abi <abi/4.0>,
 include <tunables/global>
 
 # Profile definition
-profile tor /{usr/,}sbin/tor flags=(enforce,attach_disconnected,mediate_deleted) {
+# Debian's tor.service units exec /usr/bin/tor (with /usr/sbin/tor being a
+# symlink), so attach to both the bin and sbin locations. Attaching only to
+# sbin would leave the daemon unconfined.
+profile tor /{usr/,}{,s}bin/tor flags=(enforce,attach_disconnected,mediate_deleted) {
 
   # Standard abstractions
   include <abstractions/base>
   include <abstractions/nameservice>
   include <abstractions/ssl_certs>
   include <abstractions/tor>
+
+  # Capabilities: net_bind_service is required when an ORPort/DirPort below
+  # 1024 is configured and tor has not dropped privileges yet.
+  capability net_bind_service,
 
   # Device access 
   /dev/null rw,
@@ -30,9 +37,15 @@ profile tor /{usr/,}sbin/tor flags=(enforce,attach_disconnected,mediate_deleted)
   owner /var/log/tor/* w,
   owner /var/log/tor/** w,
 
+  # Per-instance data (tor@<instance>.service uses /var/lib/tor-instances)
+  /var/lib/tor-instances/ r,
+  /var/lib/tor-instances/** rwk,
+
   # Runtime sockets and systemd notify
   /{,var/}run/tor/ r,
   /{,var/}run/tor/** rwk,
+  /{,var/}run/tor-instances/ r,
+  /{,var/}run/tor-instances/** rwk,
   /{,var/}run/systemd/notify w,
 
   # Configuration and plugins
