@@ -229,7 +229,7 @@ sub parse_file_rule {
 
     return if $raw =~ /->/;    # avoid rename/link
     return
-      if $raw !~ /,\s*$/;            # need trailing comma
+      if $raw !~ /,\s*$/;      # need trailing comma
     return if $raw =~ /^\s*(?:include|#include)\b/i;
 
     # reject obvious non-path rule starters
