@@ -53,7 +53,7 @@ sub which {
         my $p = "$dir/$bin";
         return $p if -x $p;
     }
-    return undef;
+    return;
 }
 
 sub check_tools {
@@ -80,7 +80,7 @@ sub require_root {
 
 sub parse_sys_profiles {
     open my $fh, "<", $SYS_PROFILES
-      or loge("Cannot read $SYS_PROFILES: $!");
+      or die_tool("Cannot read $SYS_PROFILES: $!");
     my %enforced;
 
     while ( my $line = <$fh> ) {
@@ -96,7 +96,8 @@ sub parse_sys_profiles {
     }
 
     close $fh;
-    return sort keys %enforced;
+    my @profiles = sort keys %enforced;
+    return @profiles;
 }
 
 sub write_state_file {
@@ -139,7 +140,7 @@ sub write_state_file {
     print $out "# one profile name per line\n\n";
     print $out "$_\n" for @profiles;
 
-    close $out;
+    close $out or die_tool("Cannot write $state_file: $!");
 }
 
 sub read_state_file {

@@ -37,6 +37,7 @@ use File::Find;
 use File::Copy     qw(copy);
 use File::Basename qw(dirname);
 use File::Path     qw(make_path);
+use Fcntl          qw(O_WRONLY O_CREAT O_EXCL);
 use POSIX          qw(strftime);
 
 # -------------------------
@@ -181,9 +182,9 @@ sub merge_perms {
 
     my ( $base_a, $exec_a ) = decompose_perms($a);
     my ( $base_b, $exec_b ) = decompose_perms($b);
-    return undef unless defined $base_a && defined $base_b;
+    return unless defined $base_a && defined $base_b;
 
-    return undef
+    return
       if defined $exec_a && defined $exec_b && $exec_a ne $exec_b;
 
     my $exec = defined $exec_a ? $exec_a : $exec_b;
@@ -226,13 +227,13 @@ sub backup_path {
 sub parse_file_rule {
     my ($raw) = @_;
 
-    return undef if $raw =~ /->/;    # avoid rename/link
-    return undef
+    return if $raw =~ /->/;    # avoid rename/link
+    return
       if $raw !~ /,\s*$/;            # need trailing comma
-    return undef if $raw =~ /^\s*(?:include|#include)\b/i;
+    return if $raw =~ /^\s*(?:include|#include)\b/i;
 
     # reject obvious non-path rule starters
-    return undef
+    return
       if $raw =~ m{^\s*(?:dbus|capability|network|mount|signal|
           ptrace|unix|change_profile|profile)\b}ix;
 
@@ -256,20 +257,20 @@ sub parse_file_rule {
         $path = $1;
     }
     else {
-        return undef;
+        return;
     }
 
     # only merge if path begins with '/' or '@{'
     my $path_check = $path;
     $path_check =~ s/^"//;    # if quoted
-    return undef
+    return
       unless $path_check =~ m{^/}
       || $path_check =~ m{^\@\{};
 
     # perms until trailing comma
     $body =~ s/,\s*$//;
     my $perms = normalize_ws($body);
-    return undef if $perms eq "";
+    return if $perms eq "";
 
     # conservative: includes indent + qualifiers + path
     my $key = join( "|", $indent, $qual, $path );
@@ -452,7 +453,8 @@ sub collect_policy_files {
         $policy_dir
     );
 
-    return sort @files;
+    my @sorted = sort @files;
+    return @sorted;
 }
 
 sub build_change_plan {
@@ -514,12 +516,14 @@ sub apply_changes {
         }
 
         # Write to a temporary file first and rename it into place so a
-        # failure cannot leave a truncated/empty policy behind.
+        # failure cannot leave a truncated/empty policy behind. O_EXCL
+        # refuses to follow or overwrite a pre-existing path (including a
+        # symlink planted by another user in a shared --policy-dir).
         my ( $mode, $uid, $gid ) = ( stat($file) )[ 2, 4, 5 ];
         my $tmpfile = "$file.merge-dupe.$$";
 
-        open my $out, ">", $tmpfile or do {
-            loge("ERROR: failed to write $tmpfile: $!");
+        sysopen my $out, $tmpfile, O_WRONLY | O_CREAT | O_EXCL, 0600 or do {
+            loge("ERROR: failed to create $tmpfile: $!");
             $errors++;
             next;
         };
