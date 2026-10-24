@@ -80,17 +80,24 @@ Safe/Conservative:
   - Only merges simple single-line file path rules
     ending with ',' where the path starts with '/'
     or '\@{...}'.
-  - Does not touch dbus/capability/network/mount/etc
-    rules, includes, or rename/link rules (lines
-    containing '->').
+  - Leaves dbus/capability/network/mount/etc rules,
+    include lines, and rename/link rules (lines
+    containing '->') in place.
+  - Recurses through DIR, so it also sees
+    abstractions/, local/, tunables/, and abi/.
+  - Canonicalizes permissions on every parsed rule,
+    not only on duplicates. Comments or include lines
+    between duplicate rules can move after the merged
+    rule.
 
 Default mode:
   - Dry-run (prints plan). Use --apply to write changes.
 
 Exit codes:
    0 OK / no changes
-   2 Changes would be made (dry-run) or some files
-     could not be processed
+   2 Changes would be made (dry-run), an invalid
+     directory/option, or a write/backup error during
+     --apply
 USAGE
     exit $code;
 }
@@ -205,6 +212,7 @@ sub is_skippable_file {
       if $path =~
 /\.(?:swp|bak|orig|rej|dpkg-(?:old|new|dist|tmp|bak)|rpm(?:new|save|orig)|pac(?:save|new)|ucf-(?:old|new|dist))$/;
     return 1 if $path =~ /~$/;
+    return 1 if $path =~ /\.bak\.\d{8}-\d{6}$/;
     return 0;
 }
 
@@ -293,7 +301,6 @@ sub make_rule_line {
     my $comment = $args{comment} // "";
 
     my $lhs = $qual ? ( $qual . " " . $path ) : $path;
-    $lhs = normalize_ws($lhs);
 
     my $line = $indent . $lhs . " " . $perms . ",";
     if ( defined($comment) && $comment ne "" ) {
@@ -427,9 +434,19 @@ sub prepare_options {
         exit 2;
       };
 
+    if ( $policy_dir =~ m{(^|/)\.\.(/|$)} ) {
+        loge("ERROR: --policy-dir must not contain '..' components");
+        exit 2;
+    }
+
     if ( !$backup_suffix ) {
         my $ts = strftime( "%Y%m%d-%H%M%S", localtime() );
         $backup_suffix = ".bak.$ts";
+    }
+
+    if ( $backup_suffix =~ m{/} || $backup_suffix =~ /\.\./ ) {
+        loge("ERROR: --backup-suffix must not contain '/' or '..'");
+        exit 2;
     }
 }
 

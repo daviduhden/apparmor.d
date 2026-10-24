@@ -1,6 +1,7 @@
 # XD torrent client profile
-# Purpose: confine the XD torrent daemon with generic paths for both
-# system-service and user-mode deployments.
+# Purpose: confine the XD torrent daemon for system-service and user-mode
+# deployments. User-mode writes are limited to the listed XDG directories;
+# add an explicit download directory if the client writes elsewhere.
 #
 # See the LICENSE file at the top of the project tree for copyright
 # and license details.

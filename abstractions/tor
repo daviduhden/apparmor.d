@@ -1,14 +1,14 @@
 # Tor common abstraction
-# Purpose: shared permissions for the tor daemon and its transport
-# helpers. Keep this abstraction minimal and read-only where possible.
-# This file is included by service profiles (e.g., `tor`) and by helper
-# transports. Avoid placing writable paths here; leave per-service writable
-# directories to the main profile.
+# Purpose: shared permissions for the tor daemon and its pluggable
+# transport helpers. Keep read-only rules here where possible; writable
+# service paths belong in the main profile. This abstraction also grants
+# network, capabilities, devices, config reads, and transport execution, so
+# review it together with usr.sbin.tor.
 #
 # See the LICENSE file at the top of the project tree for copyright
 # and license details.
 
-  # Standard includes 
+  # Standard includes
   include <abstractions/base>
   include <abstractions/nameservice>
   include <abstractions/openssl>
@@ -20,8 +20,9 @@
   network inet udp,
   network inet6 udp,
 
-  # Capabilities 
-  # Minimal capabilities that helper processes or the daemon may require.
+  # Capabilities
+  # Capabilities granted to tor and its transport helpers; review each one
+  # against the profiles that are actually deployed.
   capability chown,
   capability dac_read_search,
   capability fowner,
@@ -29,12 +30,12 @@
   capability setgid,
   capability setuid,
 
-  # Randomness and devices 
+  # Randomness and devices
   /dev/null rw,
   /dev/random r,
   /dev/urandom r,
 
-  # Tor binaries and shared data 
+  # Tor binaries and shared data
   /{usr/,}bin/tor r,
   /{usr/,}sbin/tor r,
   /{usr/,}share/tor/** r,

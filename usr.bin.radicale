@@ -1,8 +1,8 @@
 # Radicale CalDAV/CardDAV server profile
 # Purpose: confine the radicale daemon in enforce mode while allowing
 # access to TLS certificates, runtime data, and necessary Python runtime
-# files. Explicitly restrict access to build tools and other high-risk
-# binaries to reduce the attack surface in case of post-exploitation.
+# files. Blocks a small set of known build-tool paths as defense in depth;
+# this is not a complete compiler/linker restriction.
 #
 # See the LICENSE file at the top of the project tree for copyright
 # and license details.
@@ -13,8 +13,8 @@ include <tunables/global>
 
 # Profile definition
 # Main profile for the `radicale` executable. Flags: attach_disconnected
-# (allow attaching dbus/ppid changes), enforce (enforce mode), mediate_deleted
-# (mediate access to deleted files).
+# (handle paths no longer connected to the filesystem), enforce (enforce
+# mode), mediate_deleted (mediate access to deleted files).
 profile radicale /{usr/,}bin/radicale flags=(attach_disconnected, enforce, mediate_deleted) {
 
   # Standard abstractions
@@ -40,14 +40,14 @@ profile radicale /{usr/,}bin/radicale flags=(attach_disconnected, enforce, media
   /dev/null rwk,
   /proc/** r,
 
-  # TLS certificates and SSL configuration 
+  # TLS certificates and SSL configuration
   # Read access to system TLS certificates and openssl configuration.
   /etc/letsencrypt/live/** r,
   /etc/ssl/certs/** r,
   /etc/ssl/openssl.cnf r,
   /etc/ssl/private/** r,
 
-  # Radicale configuration and rights files 
+  # Radicale configuration and rights files
   # Allow reading Radicale configuration and rights/user files.
   /etc/radicale/** r,
   /etc/radicale/rights r,
@@ -63,22 +63,22 @@ profile radicale /{usr/,}bin/radicale flags=(attach_disconnected, enforce, media
   /var/log/radicale/ rw,
   /var/log/radicale/** rw,
 
-  # Sockets and runtime state 
+  # Sockets and runtime state
   /{,var/}run/radicale.sock rw,
   /{,var/}run/radicale/** rw,
 
   # Executables and interpreter access
   # The profile is attached to /usr/bin/radicale, a Python script, so the
   # interpreter must be executable. pix transitions to a dedicated python
-  # profile when one exists and otherwise keeps this profile (ix fallback),
-  # without scrubbing the environment. Python module/cache paths are already
-  # covered by abstractions/python, so no broad extra rules are needed here.
+  # profile when one exists and otherwise keeps this profile (ix fallback);
+  # the lowercase form scrubs the environment. Python module/cache paths are
+  # already covered by abstractions/python, so no broad extra rules are needed.
   /{usr/,}bin/python3 pix,
   /{usr/,}bin/radicale mrpx,
 
-  # Hardening: deny execution of compilers/linkers so an exploited process
-  # cannot build new executables. These denies grant no access and always
-  # take precedence over allow rules. A bare 'x' is only valid with 'deny'.
+  # Defense in depth: block this host's known compiler/linker paths. AppArmor
+  # is already default-deny for execution, and this list is specific to one
+  # architecture/toolchain; it is not a complete build-tool block.
   deny /usr/bin/aarch64-linux-gnu-gcc-14 x,
   deny /usr/bin/aarch64-linux-gnu-ld.bfd x,
   deny /usr/libexec/gcc/aarch64-linux-gnu/14/collect2 x,

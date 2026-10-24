@@ -1,7 +1,7 @@
 # OpenDKIM signing daemon profile
 # Purpose: confine opendkim to its sockets, keyring, and logging directories.
-# Provide DNSSEC root key read access but limit capabilities and deny ptrace
-# to reduce the risk of credential leakage or process tampering.
+# It grants broad DAC-related capabilities used by typical deployments and
+# denies ptrace; review those capabilities against the actual service user.
 #
 # See the LICENSE file at the top of the project tree for copyright
 # and license details.
@@ -22,7 +22,7 @@ profile opendkim /{usr/,}sbin/opendkim flags=(attach_disconnected, enforce, medi
   /etc/opendkim.conf r,
   /etc/default/opendkim r,
 
-  # Sockets and runtime state 
+  # Sockets and runtime state
   /{,var/}run/opendkim/opendkim.sock rw,
   /var/spool/postfix/opendkim.sock rw,
   /var/spool/postfix/opendkim/opendkim.sock rw,
@@ -59,7 +59,7 @@ profile opendkim /{usr/,}sbin/opendkim flags=(attach_disconnected, enforce, medi
   capability dac_read_search,
   deny ptrace (readby,trace),
 
-  # SSL config and binary access 
+  # SSL config and binary access
   /etc/ssl/openssl.cnf r,
   /{usr/,}sbin/opendkim px,
   /{usr/,}lib/** mr,

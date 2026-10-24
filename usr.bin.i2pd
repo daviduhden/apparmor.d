@@ -1,6 +1,6 @@
 # I2Pd router profile
-# Purpose: confine the i2pd network daemon, restrict filesystem access to
-# its runtime state, logs, and configuration, and allow required transports.
+# Purpose: confine the i2pd network daemon and restrict filesystem access to
+# its configuration, runtime state, logs, and the optional ~/.i2pd user state.
 #
 # See the LICENSE file at the top of the project tree for copyright
 # and license details.
@@ -18,7 +18,7 @@ profile i2pd /{usr/,}bin/i2pd flags=(attach_disconnected, enforce, mediate_delet
   include <abstractions/nameservice>
   include <abstractions/ssl_certs>
 
-  # Network access 
+  # Network access
   # Allow IPv4/IPv6 stream and UDP transports used by I2P.
   network inet stream,
   network inet6 stream,
@@ -29,12 +29,12 @@ profile i2pd /{usr/,}bin/i2pd flags=(attach_disconnected, enforce, mediate_delet
   /etc/i2pd/** r,
   @{system_share_dirs}/i2pd/** r,
 
-  # Persistent state and logs 
+  # Persistent state and logs
   /var/lib/i2pd/** rwk,
   /var/log/i2pd/i2pd.log w,
   /{,var/}run/i2pd/** rwk,
 
-  # Executable and runtime owner dirs 
+  # Executable and runtime owner dirs
   /{usr/,}bin/i2pd Px,
   owner @{HOME}/.i2pd/ rw,
   owner @{HOME}/.i2pd/** rwk,

@@ -57,11 +57,11 @@ sub which {
 }
 
 sub check_tools {
-    for my $tool (qw(aa-complain aa-enforce)) {
-        die_tool(
-            "'$tool' is not in PATH." . " Please install 'apparmor-utils'." )
-          unless which($tool);
-    }
+    my ($cmd) = @_;
+    my $tool = $cmd eq "downgrade" ? "aa-complain" : "aa-enforce";
+    die_tool(
+        "'$tool' is not in PATH." . " Please install 'apparmor-utils'." )
+      unless which($tool);
 }
 
 sub check_apparmor_available {
@@ -103,6 +103,10 @@ sub parse_sys_profiles {
 sub write_state_file {
     my ( $state_file, $profiles_ref ) = @_;
     my @profiles = @$profiles_ref;
+
+    if ( $state_file =~ m{(^|/)\.\.(/|$)} ) {
+        die_tool("State file path must not contain '..' components: $state_file");
+    }
 
     my ($dir) = $state_file =~ m|^(.*)/[^/]+$|;
     if ( defined $dir && $dir ne "" && !-d $dir ) {
@@ -211,17 +215,24 @@ sub cmd_downgrade {
         return 0;
     }
 
-    write_state_file( $state_file, \@enforced );
-    logi(   "Saved enforce-mode profile list to: $state_file ("
-          . scalar(@enforced)
-          . ") profiles" );
+    if ($dry) {
+        logi(   "DRY-RUN: would save enforce-mode profile list to: "
+              . "$state_file (" . scalar(@enforced) . " profiles)" );
+    }
+    else {
+        write_state_file( $state_file, \@enforced );
+        logi(   "Saved enforce-mode profile list to: $state_file ("
+              . scalar(@enforced)
+              . ") profiles" );
+    }
 
     my $ok = 0;
     for my $p (@enforced) {
         $ok++ if run_cmd( [ "aa-complain", $p ], $dry );
     }
 
-    logi( "Switched to complain: $ok/" . scalar(@enforced) );
+    logi( ( $dry ? "DRY-RUN: would switch" : "Switched" )
+          . " to complain: $ok/" . scalar(@enforced) );
     if ( $ok != scalar(@enforced) ) {
         logw(   "Some profiles could not be switched"
               . " (see FAIL messages above)." );
@@ -256,6 +267,8 @@ sub cmd_restore {
 }
 
 sub usage {
+    my ($code) = @_;
+    $code = 2 unless defined $code;
     print <<"USAGE";
 Usage:
   $0 [--state-file PATH] [--dry-run] downgrade
@@ -270,7 +283,7 @@ Options:
   --help              Show this help
 
 USAGE
-    exit(2);
+    exit($code);
 }
 
 my $state_file = "/var/lib/apparmor/enforce_to_complain.list";
@@ -284,7 +297,7 @@ sub parse_args {
         "help!"        => \$help,
     ) or usage();
 
-    usage() if $help;
+    usage(0) if $help;
 }
 
 sub parse_command {
@@ -295,9 +308,10 @@ sub parse_command {
 }
 
 sub check_prereqs {
+    my ($cmd, $dry) = @_;
     check_apparmor_available();
-    check_tools();
-    require_root($dry_run);
+    check_tools($cmd) unless $dry;
+    require_root($dry);
 }
 
 sub run_command {
@@ -311,7 +325,7 @@ sub run_command {
 sub main {
     parse_args();
     my $cmd = parse_command();
-    check_prereqs();
+    check_prereqs($cmd, $dry_run);
     exit( run_command($cmd) );
 }
 

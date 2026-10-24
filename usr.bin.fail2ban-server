@@ -1,6 +1,7 @@
 # Fail2Ban server profile
-# Purpose: confine fail2ban-server with portable distro paths and common
-# firewall/journal backends so it can be reused across different hosts.
+# Purpose: confine fail2ban-server with portable distro paths and the
+# firewall/journal paths covered below. Stock actions that use other helpers
+# or the journald socket may need additional rules.
 #
 # See the LICENSE file at the top of the project tree for copyright
 # and license details.

@@ -1,7 +1,7 @@
 # Tor daemon profile
-# Purpose: confine the tor daemon to its runtime directories, logs, and
-# trust store. Provide necessary randomness devices and pluggable transport
-# data while keeping the profile explicit and minimal.
+# Purpose: confine the tor daemon to its runtime directories, logs, config,
+# and data, with the randomness devices and pluggable transports it needs.
+# Review the included tor abstraction alongside this profile.
 #
 # See the LICENSE file at the top of the project tree for copyright
 # and license details.
@@ -26,12 +26,12 @@ profile tor /{usr/,}{,s}bin/tor flags=(enforce,attach_disconnected,mediate_delet
   # 1024 is configured and tor has not dropped privileges yet.
   capability net_bind_service,
 
-  # Device access 
+  # Device access
   /dev/null rw,
   /dev/random r,
   /dev/urandom r,
 
-  # Data and logs (owner:allow user-installed data) 
+  # Data and logs (owner = files owned by the tor process UID)
   owner /var/lib/tor/ r,
   owner /var/lib/tor/** rwk,
   owner /var/log/tor/* w,

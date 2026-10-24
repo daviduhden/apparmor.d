@@ -1,7 +1,7 @@
 # Monero daemon profile
-# Purpose: confine the monerod daemon with explicit network, data,
-# and log access. Keep writable paths limited to blockchain storage and
-# runtime state to reduce risk and attack surface.
+# Purpose: confine the monerod daemon with explicit network, data, log, and
+# user-home access. Writable paths cover blockchain storage, logs, runtime
+# state, and ~/.bitmonero.
 #
 # See the LICENSE file at the top of the project tree for copyright
 # and license details.
@@ -31,12 +31,12 @@ profile monerod /{usr/,}bin/monerod flags=(attach_disconnected, enforce, mediate
   /var/lib/monero/ r,
   /var/lib/monero/** rwk,
 
-  # System and user runtime data
+  # System device information (broad read; review before narrowing)
   /sys/devices/** r,
   owner @{HOME}/.bitmonero/ rw,
   owner @{HOME}/.bitmonero/** rwk,
 
-  # Logging and devices 
+  # Logging and devices
   /var/log/monero/ r,
   /var/log/monero/* rw,
   /var/log/monero/*.log rw,
@@ -47,7 +47,7 @@ profile monerod /{usr/,}bin/monerod flags=(attach_disconnected, enforce, mediate
   # Executable (shared libraries are provided by abstractions/base)
   /{usr/,}bin/monerod Px,
 
-  # PID and runtime directories 
+  # PID and runtime directories
   /{,var/}run/monerod.pid rwk,
   /{,var/}run/monero/ rwk,
   /{,var/}run/monero/** rwk,
