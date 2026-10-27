@@ -106,8 +106,9 @@ USAGE
 # Helpers
 # -------------------------
 sub split_comment {
-    # Split at the first unquoted '#'. This is a line-level heuristic, not a
-    # complete AppArmor lexer; every quote toggles state, with no escape parsing.
+
+   # Split at the first unquoted '#'. This is a line-level heuristic, not a
+   # complete AppArmor lexer; every quote toggles state, with no escape parsing.
     my ($line) = @_;
     my $in_quote = 0;
     for ( my $i = 0 ; $i < length($line) ; $i++ ) {
@@ -563,8 +564,8 @@ sub apply_changes {
         }
 
         if ( defined $mode ) {
-            chmod $mode & 07777, $tmpfile;
-            chown $uid, $gid, $tmpfile;    # best effort
+            chmod $mode & 07777, $tmpfile;    ## no critic (ValuesAndExpressions::ProhibitLeadingZeros)
+            chown $uid, $gid, $tmpfile;       # best effort
         }
 
         if ( !rename $tmpfile, $file ) {

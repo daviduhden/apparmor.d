@@ -48,6 +48,7 @@ sub die_tool {
 my $SYS_PROFILES = "/sys/kernel/security/apparmor/profiles";
 
 sub which {
+
     # Resolve executables by scanning PATH. With an empty component this
     # concatenation checks /<binary>, rather than searching the current dir.
     my ($bin) = @_;
@@ -61,8 +62,7 @@ sub which {
 sub check_tools {
     my ($cmd) = @_;
     my $tool = $cmd eq "downgrade" ? "aa-complain" : "aa-enforce";
-    die_tool(
-        "'$tool' is not in PATH." . " Please install 'apparmor-utils'." )
+    die_tool( "'$tool' is not in PATH." . " Please install 'apparmor-utils'." )
       unless which($tool);
 }
 
@@ -109,7 +109,8 @@ sub write_state_file {
     my @profiles = @$profiles_ref;
 
     if ( $state_file =~ m{(^|/)\.\.(/|$)} ) {
-        die_tool("State file path must not contain '..' components: $state_file");
+        die_tool(
+            "State file path must not contain '..' components: $state_file");
     }
 
     my ($dir) = $state_file =~ m|^(.*)/[^/]+$|;
@@ -227,7 +228,9 @@ sub cmd_downgrade {
 
     if ($dry) {
         logi(   "DRY-RUN: would save enforce-mode profile list to: "
-              . "$state_file (" . scalar(@enforced) . " profiles)" );
+              . "$state_file ("
+              . scalar(@enforced)
+              . " profiles)" );
     }
     else {
         write_state_file( $state_file, \@enforced );
@@ -242,7 +245,8 @@ sub cmd_downgrade {
     }
 
     logi( ( $dry ? "DRY-RUN: would switch" : "Switched" )
-          . " to complain: $ok/" . scalar(@enforced) );
+        . " to complain: $ok/"
+          . scalar(@enforced) );
     if ( $ok != scalar(@enforced) ) {
         logw(   "Some profiles could not be switched"
               . " (see FAIL messages above)." );
@@ -318,7 +322,7 @@ sub parse_command {
 }
 
 sub check_prereqs {
-    my ($cmd, $dry) = @_;
+    my ( $cmd, $dry ) = @_;
     check_apparmor_available();
     check_tools($cmd) unless $dry;
     require_root($dry);
@@ -335,7 +339,7 @@ sub run_command {
 sub main {
     parse_args();
     my $cmd = parse_command();
-    check_prereqs($cmd, $dry_run);
+    check_prereqs( $cmd, $dry_run );
     exit( run_command($cmd) );
 }
 

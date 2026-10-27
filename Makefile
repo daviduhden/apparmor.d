@@ -53,30 +53,9 @@ clean:
 	@echo "$(INFO) Nothing to clean"
 
 install:
-	@echo "$(INFO) Creating target directories: $(APPARMOR_DIR) $(ABSTRACTIONS_DIR) $(BINDIR)" && $(INSTALL) -d $(APPARMOR_DIR) $(ABSTRACTIONS_DIR) $(BINDIR) $(APPARMOR_DIR)/local
-	@if [ "$(DIVERT)" = "yes" ] && command -v $(DPKG_DIVERT) >/dev/null 2>&1; then \
-		for f in $(DIVERT_FILES); do \
-			src=$(APPARMOR_DIR)/$$f; dst=$(DIVERT_DIR)/$$f; \
-			$(INSTALL) -d $$(dirname $$dst); \
-			if [ -n "$$($(DPKG_DIVERT) --listpackage $$src 2>/dev/null)" ]; then \
-				echo "$(INFO) Diversion already present: $$src"; \
-			elif [ -e "$$src" ]; then \
-				echo "$(INFO) Diverting distro file $$src -> $$dst"; \
-				$(DPKG_DIVERT) --local --divert $$dst --rename $$src || \
-					{ echo "$(INFO) Error: could not divert $$src"; exit 1; }; \
-			else \
-				echo "$(INFO) Recording diversion for absent $$src -> $$dst"; \
-				$(DPKG_DIVERT) --local --divert $$dst --no-rename $$src || \
-					{ echo "$(INFO) Error: could not divert $$src"; exit 1; }; \
-			fi; \
-		done; \
-	else \
-		echo "$(INFO) dpkg-divert disabled or unavailable; distro profiles not diverted"; \
-	fi
-	@for f in $(ABSTRACTIONS); do dest=$(ABSTRACTIONS_DIR)/$${f#abstractions/}; [ -f $$f ] && { echo "$(INFO) Installing abstraction $$f -> $$dest"; $(INSTALL) -d $$(dirname $$dest); $(INSTALL) -m 0644 $$f $$dest || exit 1; } || echo "$(INFO) Warning: abstraction $$f not found, skipping"; done
-	@for f in $(PROFILES); do dest=$(APPARMOR_DIR)/$$f; [ -f $$f ] && { echo "$(INFO) Installing profile $$f -> $$dest"; $(INSTALL) -d $$(dirname $$dest); $(INSTALL) -m 0644 $$f $$dest || exit 1; } || echo "$(INFO) Warning: profile $$f not found, skipping"; done
-	@for f in $(PROFILES); do stub=$(APPARMOR_DIR)/local/$$f; [ -f $$stub ] || { echo "$(INFO) Creating stub local/$$f"; $(INSTALL) -d $$(dirname $$stub); $(INSTALL) -m 0644 /dev/null $$stub || exit 1; }; done
-	@for s in $(SCRIPTS); do if [ -f $$s ]; then name=$$(basename $$s .pl); dest=$(BINDIR)/$$name; echo "$(INFO) Installing script $$s -> $$dest"; $(INSTALL) -d $$(dirname $$dest); $(INSTALL) -m 0755 $$s $$dest || exit 1; else echo "$(INFO) Warning: script $$s not found, skipping"; fi; done && echo "$(INFO) Install complete"
+	@echo "$(INFO) Creating target directories: $(APPARMOR_DIR) $(ABSTRACTIONS_DIR) $(BINDIR)" && $(INSTALL) -d $(APPARMOR_DIR) $(ABSTRACTIONS_DIR) $(BINDIR) $(APPARMOR_DIR)/local && if [ "$(DIVERT)" = "yes" ] && command -v $(DPKG_DIVERT) >/dev/null 2>&1; then for f in $(DIVERT_FILES); do src=$(APPARMOR_DIR)/$$f; dst=$(DIVERT_DIR)/$$f; $(INSTALL) -d $$(dirname $$dst); if [ -n "$$($(DPKG_DIVERT) --listpackage $$src 2>/dev/null)" ]; then echo "$(INFO) Diversion already present: $$src"; elif [ -e "$$src" ]; then echo "$(INFO) Diverting distro file $$src -> $$dst"; $(DPKG_DIVERT) --local --divert $$dst --rename $$src || { echo "$(INFO) Error: could not divert $$src"; exit 1; }; else echo "$(INFO) Recording diversion for absent $$src -> $$dst"; $(DPKG_DIVERT) --local --divert $$dst --no-rename $$src || { echo "$(INFO) Error: could not divert $$src"; exit 1; }; fi; done; else echo "$(INFO) dpkg-divert disabled or unavailable; distro profiles not diverted"; fi
+	@for f in $(ABSTRACTIONS); do dest=$(ABSTRACTIONS_DIR)/$${f#abstractions/}; [ -f $$f ] && { echo "$(INFO) Installing abstraction $$f -> $$dest"; $(INSTALL) -d $$(dirname $$dest); $(INSTALL) -m 0644 $$f $$dest || exit 1; } || echo "$(INFO) Warning: abstraction $$f not found, skipping"; done && for f in $(PROFILES); do dest=$(APPARMOR_DIR)/$$f; [ -f $$f ] && { echo "$(INFO) Installing profile $$f -> $$dest"; $(INSTALL) -d $$(dirname $$dest); $(INSTALL) -m 0644 $$f $$dest || exit 1; } || echo "$(INFO) Warning: profile $$f not found, skipping"; done
+	@for f in $(PROFILES); do stub=$(APPARMOR_DIR)/local/$$f; [ -f $$stub ] || { echo "$(INFO) Creating stub local/$$f"; $(INSTALL) -d $$(dirname $$stub); $(INSTALL) -m 0644 /dev/null $$stub || exit 1; }; done && for s in $(SCRIPTS); do if [ -f $$s ]; then name=$$(basename $$s .pl); dest=$(BINDIR)/$$name; echo "$(INFO) Installing script $$s -> $$dest"; $(INSTALL) -d $$(dirname $$dest); $(INSTALL) -m 0755 $$s $$dest || exit 1; else echo "$(INFO) Warning: script $$s not found, skipping"; fi; done && echo "$(INFO) Install complete"
 
 install-scripts:
 	@$(INSTALL) -d $(BINDIR) && for s in $(SCRIPTS); do if [ -f $$s ]; then name=$$(basename $$s .pl); dest=$(BINDIR)/$$name; echo "$(INFO) Installing script $$s -> $$dest"; $(INSTALL) -m 0755 $$s $$dest || exit 1; else echo "$(INFO) Warning: script $$s not found, skipping"; fi; done && echo "$(INFO) Scripts installed"
@@ -88,24 +67,9 @@ unload-profiles:
 	@command -v $(APPARMOR_PARSER) >/dev/null || { echo "$(INFO) apparmor_parser not found"; exit 1; }; for f in $(PROFILES); do src=$(APPARMOR_DIR)/$$f; if [ -f $$src ]; then echo "$(INFO) Unloading $$src"; $(APPARMOR_PARSER) -R $$src >/dev/null 2>&1 || echo "$(INFO) Warning: could not unload $$src"; else echo "$(INFO) Skipping missing profile $$src"; fi; done
 
 uninstall:
-	@for s in $(SCRIPTS); do name=$$(basename $$s .pl); echo "$(INFO) Removing $(BINDIR)/$$name"; rm -f $(BINDIR)/$$name || true; done
-	@for f in $(PROFILES); do echo "$(INFO) Removing $(APPARMOR_DIR)/$$f"; rm -f $(APPARMOR_DIR)/$$f || true; stub=$(APPARMOR_DIR)/local/$$f; if [ -f $$stub ] && [ ! -s $$stub ]; then echo "$(INFO) Removing empty local stub $$stub"; rm -f $$stub || true; elif [ -f $$stub ]; then echo "$(INFO) Preserving non-empty local override $$stub"; fi; done
-	@for f in $(ABSTRACTIONS); do echo "$(INFO) Removing $(ABSTRACTIONS_DIR)/$${f#abstractions/}"; rm -f $(ABSTRACTIONS_DIR)/$${f#abstractions/} || true; done
-	@if [ "$(DIVERT)" = "yes" ] && command -v $(DPKG_DIVERT) >/dev/null 2>&1; then \
-		for f in $(DIVERT_FILES); do \
-			src=$(APPARMOR_DIR)/$$f; dst=$(DIVERT_DIR)/$$f; \
-			if [ -n "$$($(DPKG_DIVERT) --listpackage $$src 2>/dev/null)" ]; then \
-				if $(DPKG_DIVERT) --local --divert $$dst --rename --remove $$src 2>/dev/null; then \
-					echo "$(INFO) Removed diversion for $$src (restored from $$dst)"; \
-				else \
-					echo "$(INFO) Warning: could not remove diversion for $$src"; \
-				fi; \
-			fi; \
-		done; \
-		if [ -n "$(DIVERT_DIR_SAFE)" ]; then find $(DIVERT_DIR) -depth -type d -empty -delete 2>/dev/null || true; else echo "$(INFO) Warning: refusing to clean DIVERT_DIR outside APPARMOR_DIR"; fi; \
-	fi
-	@rmdir --ignore-fail-on-non-empty $(APPARMOR_DIR)/local $(ABSTRACTIONS_DIR) 2>/dev/null || true
-	@echo "$(INFO) Uninstall complete"
+	@for s in $(SCRIPTS); do name=$$(basename $$s .pl); echo "$(INFO) Removing $(BINDIR)/$$name"; rm -f $(BINDIR)/$$name || true; done && for f in $(PROFILES); do echo "$(INFO) Removing $(APPARMOR_DIR)/$$f"; rm -f $(APPARMOR_DIR)/$$f || true; stub=$(APPARMOR_DIR)/local/$$f; if [ -f $$stub ] && [ ! -s $$stub ]; then echo "$(INFO) Removing empty local stub $$stub"; rm -f $$stub || true; elif [ -f $$stub ]; then echo "$(INFO) Preserving non-empty local override $$stub"; fi; done
+	@for f in $(ABSTRACTIONS); do echo "$(INFO) Removing $(ABSTRACTIONS_DIR)/$${f#abstractions/}"; rm -f $(ABSTRACTIONS_DIR)/$${f#abstractions/} || true; done && if [ "$(DIVERT)" = "yes" ] && command -v $(DPKG_DIVERT) >/dev/null 2>&1; then for f in $(DIVERT_FILES); do src=$(APPARMOR_DIR)/$$f; dst=$(DIVERT_DIR)/$$f; if [ -n "$$($(DPKG_DIVERT) --listpackage $$src 2>/dev/null)" ]; then if $(DPKG_DIVERT) --local --divert $$dst --rename --remove $$src 2>/dev/null; then echo "$(INFO) Removed diversion for $$src (restored from $$dst)"; else echo "$(INFO) Warning: could not remove diversion for $$src"; fi; fi; done; if [ -n "$(DIVERT_DIR_SAFE)" ]; then find $(DIVERT_DIR) -depth -type d -empty -delete 2>/dev/null || true; else echo "$(INFO) Warning: refusing to clean DIVERT_DIR outside APPARMOR_DIR"; fi; fi
+	@rmdir --ignore-fail-on-non-empty $(APPARMOR_DIR)/local $(ABSTRACTIONS_DIR) 2>/dev/null || true; echo "$(INFO) Uninstall complete"
 
 load: install unload-profiles
 	@command -v $(APPARMOR_PARSER) >/dev/null || { echo "$(INFO) apparmor_parser not found"; exit 1; }; for f in $(PROFILES); do src=$(APPARMOR_DIR)/$$f; if [ -f $$src ]; then echo "$(INFO) Loading $$src"; $(APPARMOR_PARSER) $(APPARMOR_FLAGS) $$src || exit 1; else echo "$(INFO) Missing profile $$src"; exit 1; fi; done
