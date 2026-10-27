@@ -10,6 +10,8 @@ Main contents
 - Helper scripts: `scripts/enforce-complain-toggle.pl`, `scripts/merge-dupe-rules.pl`
 - `Makefile`: installs profiles, abstractions and helper scripts
 - `AGENTS.md` and `.agents/skills/`: agent instructions and task procedures
+- `scripts/check-agent-sync.py`: dependency-free structural guard for agent and
+  skill maintenance; run it manually before completing repository changes
 
 Quick `Makefile` usage
 - Install profiles and helpers (writes `/etc/apparmor.d` and the helper
@@ -117,7 +119,12 @@ Notes
   `apparmor_parser` with the configured flags. It requires root, errors if the
   parser is not installed, and stops at the first missing or rejected profile.
 - `make test` is a placeholder that prints `No automated tests defined`. There
-  are no unit tests or CI workflows; `make check` is the only syntax gate.
+  are no unit tests or CI workflows. `make check` is the policy syntax gate.
+- To run the repository knowledge check locally, use
+  `python3 scripts/check-agent-sync.py --base <base-ref>`. The base ref must
+  point to the last synchronized revision. It checks change coverage, basic
+  instruction structure, and detectable local Markdown references; review the
+  diff for semantic relevance because the script cannot establish it.
 - All profiles use `abi <abi/4.0>`; older parsers may fail to load them or may
   warn under `--Werror`. `@{system_share_dirs}` also depends on the host
   tunables.

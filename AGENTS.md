@@ -7,8 +7,8 @@ documentation lives in `README.md`; task-specific procedures live in
 ## What this repository is
 
 A small collection of AppArmor profiles for network daemons and helpers, one
-shared abstraction, and two Perl maintenance scripts. There is no application
-code, no test suite, and no CI.
+shared abstraction, two Perl maintenance scripts, and a Python agent-sync
+validator. There is no application code, automated test suite, or CI workflow.
 
 ## Architecture
 
@@ -21,8 +21,9 @@ code, no test suite, and no CI.
   profile only applies when the executed path matches that glob.
 - **`abstractions/tor`** holds shared Tor rules (includes, network, devices,
   capabilities, pluggable transports). It is included by `usr.sbin.tor`.
-- **`scripts/*.pl`** are installed without the `.pl` suffix. They are the only
-  executable tooling in the repository.
+- **`scripts/*.pl`** are installed without the `.pl` suffix. The standalone
+  `scripts/check-agent-sync.py` is a manually run repository validator and is
+  not installed.
 - **`Makefile`** installs, loads, syntax-checks, and uninstalls policy. It also
   creates empty `local/<profile-file>` stubs. Profiles end with
   `include if exists <local/<profile-file>>`.
@@ -87,9 +88,11 @@ code, no test suite, and no CI.
 | Uninstall | `make uninstall` | Deletes shipped policy and empty `local/<profile-file>` stubs; preserves non-empty overrides; does not unload kernel policy; can mask failures. |
 | Enforce/complain toggle | `enforce-complain-toggle.pl [--state-file PATH] [--dry-run] downgrade\|restore` | Installed as `enforce-complain-toggle`. Requires `aa-complain`/`aa-enforce` and root for real changes. |
 | Duplicate-rule merger | `merge-dupe-rules.pl [--policy-dir DIR] [--apply] [--backup-suffix SUFFIX] [--verbose]` | Dry-run by default. Installed as `merge-dupe-rules`. |
+| Agent/skill synchronization | `python3 scripts/check-agent-sync.py --base <base-ref> [--head <head-ref>]` | Requires substantive instruction updates for project changes; checks instruction structure and local Markdown references. |
 
-There is no build step, no unit-test command, no linter configuration, and no
-CI workflow. Do not claim otherwise.
+There is no build step, no unit-test command, linter configuration, or CI
+workflow. The agent-sync validator is run manually; do not describe it as a
+policy syntax check.
 
 ## Validation levels
 
@@ -153,6 +156,90 @@ on them:
 | `apparmor-policy-validation` | Checking syntax, auditing denials, or deciding what "validated" means. |
 | `apparmor-installation-and-modes` | Installing, loading, uninstalling, or switching enforce/complain/disabled state. |
 | `perl-profile-tooling` | Using or changing `enforce-complain-toggle.pl` or `merge-dupe-rules.pl`. |
+
+## Continuous Agent & Skills Maintenance
+
+Agent instructions and skills are living repository artifacts.
+
+Every repository modification MUST include an agent/skills synchronization step.
+
+Before completing any task, inspect the applicable AGENTS.md and SKILL.md files, update the affected instructions, and validate their consistency with the implementation.
+
+A code change without the corresponding agent knowledge maintenance is considered incomplete.
+
+Never claim completion when the synchronization step has been skipped or has failed.
+
+This requirement applies to every tracked repository change: policy, scripts,
+configuration, dependencies, tests, workflows, documentation, and repository
+structure. Perform one complete synchronization review at the end of each task;
+repeat only if that review or its validation finds an error.
+
+### Required procedure
+
+1. Inspect `AGENTS.md` files from the repository root through the changed
+   paths, plus all applicable `.agents/skills/**/SKILL.md` files. Also inspect
+   `.github/agents/*.agent.md`, `.github/skills/**/SKILL.md`,
+   `.claude/skills/**/SKILL.md`, and tool-specific instructions (for example
+   `.github/copilot-instructions.md`, `.cursor/rules/**`, and `CLAUDE.md`) when
+   present. Do not assume this list is exhaustive; discover instruction files
+   for tools used by this repository.
+2. Map changed components to skills using each skill's activation conditions
+   and the Skills table above. Review specialized agent instructions for the
+   same responsibility. If no skill applies, decide whether a reusable
+   procedure warrants a new skill or belongs in an existing one.
+3. Update at least one relevant agent instruction or skill for every repository
+   change. Make a specific, reusable correction or addition reflecting changed
+   behavior, a verified procedure, a changed path/command, or a discovered
+   repository convention. Never add timestamps, empty edits, or execution-only
+   notes to satisfy the rule. Update every other affected instruction too.
+4. When changing agent or skill policy itself, review the whole instruction
+   system, including this section, all skill links and names, and the validator
+   and validator. Avoid recursive edits: one complete review after the task is
+   sufficient unless it finds an error.
+5. Validate the changed instruction files' structure and local references, and
+   run `python3 scripts/check-agent-sync.py --base <base-ref>`. No CI workflow
+   invokes this check. It cannot judge whether the knowledge change is
+   semantically relevant; the author must review that in the diff.
+6. Report which agents and skills were reviewed, which instruction files
+   changed, what reusable knowledge was added or corrected, commands actually
+   run, and synchronization status.
+
+### Agent and skill authoring requirements
+
+- Every specialized agent must include a **Post-Change Knowledge
+  Synchronization** section requiring review of its related skills and own
+  instructions after any repository modification, updates for reusable
+  findings or changed behavior, applicable validation, and a synchronization
+  result in its final report.
+- Every `SKILL.md` must preserve its Agent Skills YAML frontmatter and include a
+  **Maintenance & Continuous Learning** section. When used for a repository
+  modification, review and update it for changed procedures, tools,
+  configuration, assumptions, reusable findings, corrections, examples, and
+  validation. Exclude execution-specific notes that will not help future use.
+- Create a skill only for a distinct, reusable workflow without an appropriate
+  existing skill. Otherwise extend the closest skill and its activation
+  conditions. Keep agent and skill responsibilities and cross-references
+  aligned.
+
+### Mandatory Definition of Done
+
+- [ ] Repository changes implemented.
+- [ ] Relevant agent instructions reviewed.
+- [ ] Relevant skills reviewed.
+- [ ] Affected AGENTS.md / SKILL.md files updated.
+- [ ] Obsolete knowledge removed.
+- [ ] New reusable knowledge incorporated.
+- [ ] Agent and skill references validated.
+- [ ] Automated maintenance checks passed.
+- [ ] Final synchronization status reported.
+
+If a check fails, correct it or explicitly declare the task incomplete and
+identify the limitation. The final report must contain **Agent & Skills
+Synchronization** with agents reviewed, skills reviewed, instruction files
+updated, knowledge incorporated/corrected, validations actually run, and
+**PASS** or **FAIL**. The automated validator checks structural conditions and
+detectable local references only; human review must establish semantic
+relevance. Never report a check as passed unless it ran successfully.
 
 ## License
 

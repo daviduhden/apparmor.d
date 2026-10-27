@@ -234,3 +234,19 @@ paths, ports, sockets, capabilities, or a denial reported for them. Pair it with
 - `apparmor-profile-authoring` for rule-level guidance.
 - `apparmor-policy-validation` for denial triage.
 - Upstream documentation and the installed unit files for deployment facts.
+
+## Maintenance & Continuous Learning
+
+After using this skill to modify any repository content, review this skill and
+its related `AGENTS.md` and skills once the implementation is complete. Update
+this skill when the task establishes reusable knowledge or changes a procedure,
+tool, configuration, path, assumption, example, or validation step. Correct any
+instruction that proved inaccurate, remove obsolete or contradictory guidance,
+and keep cross-references working. Do not record one-off execution details.
+
+Every repository change must include a substantive, relevant agent/skills
+update. Run `python3 scripts/check-agent-sync.py --base <base-ref>` and review the diff for semantic relevance; the validator checks
+structure and detectable references but cannot establish relevance. Report the
+skills and agent instructions reviewed, updates made, checks actually run, and
+PASS/FAIL synchronization status. A failed or skipped synchronization means
+the task is incomplete.
