@@ -26,6 +26,8 @@ profile monero-lws-daemon /{usr/,}bin/monero-lws-daemon flags=(attach_disconnect
   owner /var/lib/monero-lws/** rwk,
 
   # Logs and runtime sockets
+  # owner limits these accesses to files owned by the process UID;
+  # it does not mean that files are merely expected to be service-owned.
   owner /var/log/monero-lws/ r,
   owner /var/log/monero-lws/** rwk,
   /{,var/}run/monero-lws/ r,
@@ -38,6 +40,8 @@ profile monero-lws-daemon /{usr/,}bin/monero-lws-daemon flags=(attach_disconnect
   network inet6 tcp,
 
   # Executable (shared libraries are provided by abstractions/base)
+  # Px requires a matching separate profile and scrubs the environment during
+  # the transition; the target profile must be available on the host.
   /{usr/,}bin/monero-lws-daemon Px,
 
   # Local overrides

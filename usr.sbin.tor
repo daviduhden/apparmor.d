@@ -38,6 +38,7 @@ profile tor /{usr/,}{,s}bin/tor flags=(enforce,attach_disconnected,mediate_delet
   owner /var/log/tor/** w,
 
   # Per-instance data (tor@<instance>.service uses /var/lib/tor-instances)
+  # Unlike the base Tor data rule above, these paths are not owner-qualified.
   /var/lib/tor-instances/ r,
   /var/lib/tor-instances/** rwk,
 

@@ -62,6 +62,12 @@ State exactly which levels were executed. A documentation-only task is level 0
     defect. Known examples: `attach_disconnected` described as "dbus/ppid
     changes" and `pix` described as "without scrubbing the environment".
 
+For comment-only policy documentation, compare every changed profile against
+its prior version and verify that active declarations, includes, variables,
+flags, and rules are unchanged. Do not remove every `#` line during comparison:
+AppArmor `#include` directives are active policy syntax. A successful textual
+comparison is not equivalent to parser or runtime validation.
+
 Useful read-only searches:
 
 ```sh

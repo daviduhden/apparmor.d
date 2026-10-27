@@ -23,6 +23,8 @@ profile fail2ban-server /{usr/,usr/local/}bin/fail2ban-server flags=(attach_disc
   network unix stream,
 
   # nft/iptables actions use netlink to manage kernel firewall rules.
+  # Combined with net_admin, this lets the daemon change host firewall state;
+  # the rule is not limited to a particular netlink family or table.
   network netlink raw,
 
   # Fail2Ban package and jail/filter configuration.
@@ -75,6 +77,8 @@ profile fail2ban-server /{usr/,usr/local/}bin/fail2ban-server flags=(attach_disc
   /var/log/postfix/** r,
 
   # Journal reader backend.
+  # These rules permit reading journal files; they do not grant access to the
+  # journald socket used by the systemd journal API.
   /run/log/journal/ r,
   /run/log/journal/** r,
   /var/log/journal/ r,
@@ -87,6 +91,8 @@ profile fail2ban-server /{usr/,usr/local/}bin/fail2ban-server flags=(attach_disc
   /var/run/xtables.lock rw,
 
   # Helpers used by action templates.
+  # ix keeps each helper in this profile, so shell-launched actions retain
+  # the daemon's net_admin capability and filesystem permissions.
   /{bin,usr/bin}/sh ix,
   /{bin,usr/bin}/dash ix,
   /{bin,usr/bin}/bash ix,

@@ -89,6 +89,12 @@ Do not use it to install, load, or switch profile modes. Use
       first rejected profile, so check the reported file and fix it before
       rerunning.
 
+For documentation-only edits, explain verified rule-group effects in comments
+without changing policy tokens, includes, declarations, order, or line
+continuations. Treat a comment-only diff as necessary evidence, not proof of
+semantic equivalence: inspect the complete diff and preserve AppArmor
+`#include` directives as executable syntax.
+
 ## Minimal-permission checklist
 
 - [ ] No `/**` rule with write permissions.

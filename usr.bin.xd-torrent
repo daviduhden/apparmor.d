@@ -19,6 +19,7 @@ profile xd-torrent /{usr/,usr/local/}bin/{XD,xd-torrent} flags=(attach_disconnec
   include <abstractions/ssl_certs>
 
   # Network access (I2P SAM + peer traffic + loopback web/RPC UI)
+  # These family/type grants do not restrict destinations, ports, or peers.
   network inet stream,
   network inet6 stream,
   network inet tcp,
@@ -53,6 +54,8 @@ profile xd-torrent /{usr/,usr/local/}bin/{XD,xd-torrent} flags=(attach_disconnec
   /{,var/}run/XD/** rwk,
 
   # User-mode config/state
+  # Only these listed XDG trees are writable here; downloads elsewhere need
+  # a site override or an explicit rule in a future policy change.
   owner @{HOME}/.config/xd/ rw,
   owner @{HOME}/.config/xd/** rwk,
   owner @{HOME}/.config/XD/ rw,

@@ -13,6 +13,62 @@ Main contents
 - `scripts/check-agent-sync.pl`: dependency-free Perl structural guard for agent and
   skill maintenance; run it manually before completing repository changes
 
+## Policy and tool architecture
+
+Each root `usr.*` file is an independently loaded profile source; its filename
+follows the installed executable path, while its `profile` declaration names
+the confined application. The eight shipped profiles are Tor, i2pd, monerod,
+monero-lws-daemon, Radicale, OpenDKIM, Fail2Ban, and xd-torrent. Each includes
+host-provided abstractions and an optional `local/<source-filename>` site
+override. Those optional overrides are installation state and are not shipped
+in this repository.
+
+`abstractions/tor` is the only repository-owned shared policy fragment. The
+Tor profile includes it; it adds name service and OpenSSL rules, network
+families, capabilities, device and system reads, and pluggable transport
+execution modes. Because an abstraction contributes rules to its caller, its
+permissions must be reviewed together with `usr.sbin.tor`. Other referenced
+abstractions, `tunables/global`, and `abi/4.0` come from the host AppArmor
+installation. There are no repository-owned tunables, aliases, ABI fragments,
+child profiles, or hats in the tracked tree.
+
+All eight declarations use enforce mode and the ABI 4.0 interface. The main
+profile's attachment determines which executed path receives the policy; a
+filename alone does not cause loading. Includes are resolved by AppArmor's
+configured include path, and `include if exists <local/...>` is optional.
+The Makefile copies profiles and the Tor abstraction, while `make check`
+copies the abstraction into a temporary include tree and relies on host
+standard abstractions and tunables.
+
+Several rule groups deserve review during maintenance: Tor's abstraction grants
+six capabilities and gives `obfsproxy` a `PUx` unconfined fallback; Tor
+instance data is not owner-qualified. Radicale can read all paths matched by
+`/etc/ssl/private/**`, has `dac_override`, and reads `/proc/**`. Fail2Ban has
+`net_admin` and raw netlink access, and its shell/helper `ix` rules retain the
+same profile. OpenDKIM has broad DAC capabilities and writable mail log trees.
+These are descriptions of the checked-in rules, not claims that each grant is
+required by every deployment.
+
+The three Perl sources have distinct roles:
+
+- `enforce-complain-toggle.pl` snapshots names currently reported as enforce
+  in securityfs, then runs `aa-complain`; `restore` reads the snapshot and
+  runs `aa-enforce`. It backs up an existing state file, but a partial
+  downgrade can leave the snapshot representing profiles not successfully
+  switched.
+- `merge-dupe-rules.pl` recursively scans regular files below its policy root
+  and recognizes only a restricted, single-line path-rule subset. Dry-run is
+  the default. `--apply` backs up and replaces changed files; the heuristic
+  can canonicalize permission order and move intervening comment/blank lines
+  after a merged rule, so inspect its plan before applying.
+- `check-agent-sync.pl` compares changed project paths with changed instruction
+  files and checks basic structure and local Markdown links. It is a repository
+  maintenance guard, not an AppArmor parser or semantic documentation review.
+
+No `.pm` modules or `.t` tests are tracked. The Makefile does not generate
+profile sources; installed files are copies of the tracked profiles and
+abstraction.
+
 Quick `Makefile` usage
 - Install profiles and helpers (writes `/etc/apparmor.d` and the helper
   directory; may run `dpkg-divert`; root normally required):

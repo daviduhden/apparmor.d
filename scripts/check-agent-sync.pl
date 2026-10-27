@@ -9,6 +9,8 @@ use File::Spec;
 use Getopt::Long qw(GetOptions);
 
 my $ROOT = File::Spec->rel2abs(File::Spec->catdir($RealBin, '..'));
+# The validator compares changed project files with changed instruction files;
+# its checks are structural and cannot establish whether new guidance is useful.
 my ($base, $head, $worktree);
 GetOptions('base=s' => \$base, 'base-ref=s' => \$base,
            'head=s' => \$head, 'worktree' => \$worktree) or usage();
@@ -25,6 +27,8 @@ sub git {
     open my $fh, '-|', 'git', '-C', $ROOT, @args or die "cannot run git: $!";
     local $/;
     my $out = <$fh> // '';
+    # Closing the pipe checks Git's exit status; stdout is returned verbatim so
+    # callers can safely split NUL-delimited path lists.
     close $fh or die "git @args failed";
     return $out;
 }
@@ -39,6 +43,8 @@ sub meaningful {
     my ($s) = @_;
     $s =~ s/^\s+|\s+$//g;
     return 0 if !$s || $s =~ /^(?:#|<!--|-->)/;
+    # Ignore Markdown punctuation before the minimum-length heuristic; this
+    # rejects heading-only edits but does not assess semantic relevance.
     $s =~ s/[`*_#>\[\]()-]//g;
     return length($s) >= 12;
 }
@@ -52,6 +58,8 @@ sub diff_for {
 }
 
 my %changed;
+# Worktree mode includes unstaged, staged, and untracked files; revision mode
+# uses Git's name-only diff for the requested range.
 if ($worktree || !defined($base)) {
     $changed{$_} = 1 for split_nul(git('diff', '--name-only', '-z', 'HEAD'));
     $changed{$_} = 1 for split_nul(git('diff', '--cached', '--name-only', '-z'));

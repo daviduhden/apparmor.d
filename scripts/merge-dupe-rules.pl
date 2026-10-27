@@ -106,6 +106,8 @@ USAGE
 # Helpers
 # -------------------------
 sub split_comment {
+    # Split at the first unquoted '#'. This is a line-level heuristic, not a
+    # complete AppArmor lexer; every quote toggles state, with no escape parsing.
     my ($line) = @_;
     my $in_quote = 0;
     for ( my $i = 0 ; $i < length($line) ; $i++ ) {
@@ -146,6 +148,8 @@ sub decompose_perms {
     my %base;
     my $exec;
 
+    # Tokenize the compact permission spelling, extract at most one supported
+    # exec mode, and reject unknown letters instead of guessing their meaning.
     for my $tok ( grep { length } split( /\s+/, $perm_str ) ) {
         my $rest = $tok;
         my $this_exec;
@@ -268,6 +272,8 @@ sub parse_file_rule {
         return;
     }
 
+    # This deliberately recognizes only simple path rules. It does not parse
+    # AppArmor path glob semantics, variable expansion, or the full grammar.
     # only merge if path begins with '/' or '@{'
     my $path_check = $path;
     $path_check =~ s/^"//;    # if quoted
@@ -326,6 +332,9 @@ sub transform_lines {
     my $pending_comment = "";
     my $pending_nl      = "\n";
 
+    # Buffer a candidate run so compatible adjacent rules can be merged while
+    # retaining the first rule's comment and the intervening blank/comment
+    # lines. Such gap lines are emitted after the merged rule.
     my $flush = sub {
         return unless $pending;
 
@@ -458,7 +467,8 @@ sub collect_policy_files {
             wanted   => sub {
                 return if -d $File::Find::name;
 
-                # Never rewrite through a symlink (e.g. the files linked
+                # Traverse regular files recursively, but never rewrite
+                # through a symlink (e.g. the files linked
                 # from /etc/apparmor.d/disable), which would modify the
                 # symlink target.
                 return if -l $File::Find::name;

@@ -23,6 +23,8 @@ profile opendkim /{usr/,}sbin/opendkim flags=(attach_disconnected, enforce, medi
   /etc/default/opendkim r,
 
   # Sockets and runtime state
+  # Path permissions cover these socket files, while AF_UNIX mediation is a
+  # separate network permission and is not declared in this profile.
   /{,var/}run/opendkim/opendkim.sock rw,
   /var/spool/postfix/opendkim.sock rw,
   /var/spool/postfix/opendkim/opendkim.sock rw,
@@ -48,6 +50,8 @@ profile opendkim /{usr/,}sbin/opendkim flags=(attach_disconnected, enforce, medi
   /var/log/mail/** rw,
 
   # Network and capabilities
+  # DAC-related capabilities can bypass discretionary permission checks;
+  # the explicit ptrace denial blocks read/trace access despite default deny.
   network inet stream,
   network inet6 stream,
   network inet dgram,

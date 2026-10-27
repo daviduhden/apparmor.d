@@ -19,6 +19,8 @@ profile monerod /{usr/,}bin/monerod flags=(attach_disconnected, enforce, mediate
   include <abstractions/ssl_certs>
 
   # Capabilities & network
+  # setuid/setgid permit identity changes, while net_bind_service permits
+  # binding privileged ports. AppArmor does not constrain which port is used.
   capability setgid,
   capability setuid,
   capability net_bind_service,
@@ -32,6 +34,7 @@ profile monerod /{usr/,}bin/monerod flags=(attach_disconnected, enforce, mediate
   /var/lib/monero/** rwk,
 
   # System device information (broad read; review before narrowing)
+  # The recursive sysfs read rule is broader than a single hardware attribute.
   /sys/devices/** r,
   owner @{HOME}/.bitmonero/ rw,
   owner @{HOME}/.bitmonero/** rwk,
@@ -45,6 +48,8 @@ profile monerod /{usr/,}bin/monerod flags=(attach_disconnected, enforce, mediate
   /dev/null rw,
 
   # Executable (shared libraries are provided by abstractions/base)
+  # Px requires a separate profile matching this executable and scrubs the
+  # environment during the transition.
   /{usr/,}bin/monerod Px,
 
   # PID and runtime directories

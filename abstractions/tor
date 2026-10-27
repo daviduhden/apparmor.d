@@ -51,6 +51,8 @@
 
   # Pluggable transports (binaries)
   # Allow execution of bundled pluggable transport helpers where present.
+  # PUx falls back to an unconfined execution if no matching profile exists;
+  # Pix instead uses a matching profile when available and otherwise inherits.
   /{usr/,}bin/obfsproxy PUx,
   /{usr/,}bin/obfs4proxy Pix,
   /{usr/,}bin/snowflake-client Pix,

@@ -218,6 +218,12 @@ paths, ports, sockets, capabilities, or a denial reported for them. Pair it with
 6. Validate with `apparmor-policy-validation`; only run runtime tests with
    explicit authorization.
 
+For documentation-only reviews, comments may state the direct scope and
+security consequence of checked-in rules, but must distinguish that evidence
+from assumptions about deployment intent. Preserve all active policy tokens
+and report broad permissions as findings rather than silently correcting
+them.
+
 ## Validation
 
 - Static: every path in the review table appears in the profile with the right

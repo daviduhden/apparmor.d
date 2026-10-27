@@ -180,6 +180,14 @@ When execution is not authorized, verify by reading:
 - whether paths and profile names are quoted or separated with `--`;
 - backup naming, permissions, and collision behavior.
 
+For documentation-only changes, add comments next to the algorithm or
+side-effect boundary they explain. Describe regexes as the script's limited
+text recognizers, not as full AppArmor parsers; preserve executable Perl,
+regexes, quoting, and heredocs byte-for-byte. The repository also has
+`scripts/check-agent-sync.pl`, a read-only structural checker for instruction
+updates; run it from the repository per `AGENTS.md`, but do not treat it as a
+policy parser or as evidence that documentation is semantically complete.
+
 `perl -c` is a syntax check, but it executes the Perl interpreter. Use it only
 when execution is authorized; it is not part of a documentation-only review.
 

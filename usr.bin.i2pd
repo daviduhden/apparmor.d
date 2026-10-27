@@ -14,6 +14,8 @@ profile i2pd /{usr/,}bin/i2pd flags=(attach_disconnected, enforce, mediate_delet
 
   # Standard abstractions
   include <abstractions/base>
+  # Both OpenSSL-related abstractions contribute rules; inspect both when
+  # assessing the effective TLS-related file access.
   include <abstractions/openssl>
   include <abstractions/nameservice>
   include <abstractions/ssl_certs>
@@ -30,6 +32,8 @@ profile i2pd /{usr/,}bin/i2pd flags=(attach_disconnected, enforce, mediate_delet
   @{system_share_dirs}/i2pd/** r,
 
   # Persistent state and logs
+  # State is writable throughout the daemon data tree. The log rule grants
+  # file write access but not directory write access for creating the file.
   /var/lib/i2pd/** rwk,
   /var/log/i2pd/i2pd.log w,
   /{,var/}run/i2pd/** rwk,

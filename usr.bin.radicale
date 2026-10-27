@@ -26,7 +26,8 @@ profile radicale /{usr/,}bin/radicale flags=(attach_disconnected, enforce, media
   include <abstractions/user-tmp>
 
   # Capabilities & network
-  # Minimal capabilities required by the daemon at runtime.
+  # These capabilities include DAC override, which can bypass ordinary file
+  # permission checks; AppArmor path rules still govern mediated file access.
   capability chown,
   capability dac_override,
   capability setgid,
@@ -37,11 +38,14 @@ profile radicale /{usr/,}bin/radicale flags=(attach_disconnected, enforce, media
   network inet6 stream,
 
   # Basic device and proc access
+  # The recursive proc read grant exposes readable proc entries beyond a
+  # single process or status file.
   /dev/null rwk,
   /proc/** r,
 
   # TLS certificates and SSL configuration
-  # Read access to system TLS certificates and openssl configuration.
+  # This includes every readable private-key path under /etc/ssl/private,
+  # not only a Radicale-specific key.
   /etc/letsencrypt/live/** r,
   /etc/ssl/certs/** r,
   /etc/ssl/openssl.cnf r,

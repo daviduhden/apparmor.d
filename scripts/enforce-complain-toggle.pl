@@ -48,6 +48,8 @@ sub die_tool {
 my $SYS_PROFILES = "/sys/kernel/security/apparmor/profiles";
 
 sub which {
+    # Resolve executables by scanning PATH. With an empty component this
+    # concatenation checks /<binary>, rather than searching the current dir.
     my ($bin) = @_;
     for my $dir ( split( /:/, ( $ENV{PATH} // "" ) ) ) {
         my $p = "$dir/$bin";
@@ -88,6 +90,8 @@ sub parse_sys_profiles {
         $line =~ s/^\s+|\s+$//g;
         next if $line eq "";
 
+        # securityfs reports one profile and mode per line; only enforce-mode
+        # entries are snapshotted, while complain/kill entries are ignored.
         if ( $line =~ /^(.*)\s+\((enforce|complain|kill)\)\s*$/ ) {
             my ( $name, $mode ) = ( $1, $2 );
             $name =~ s/\s+$//;
@@ -114,6 +118,8 @@ sub write_state_file {
           or die_tool("Cannot create directory $dir: $!");
     }
 
+    # Preserve a timestamped copy before replacing a prior snapshot. A later
+    # failure while switching profiles can still leave a partial downgrade.
     if ( -e $state_file ) {
 
         # Strip leading '/' and './' so both absolute and relative state
@@ -157,6 +163,8 @@ sub read_state_file {
       or die_tool("Cannot read $state_file: $!");
     my @profiles;
 
+    # Snapshot lines are not validated as profile identifiers; cmd_restore
+    # passes each nonblank, noncomment line directly to aa-enforce.
     while ( my $line = <$fh> ) {
         chomp($line);
         $line =~ s/^\s+|\s+$//g;
@@ -178,6 +186,8 @@ sub run_cmd {
         return 1;
     }
 
+    # List-form system avoids shell interpretation; $? is decoded into exec,
+    # signal, or child exit status for the caller's success count.
     system(@cmd);
 
     if ( $? == -1 ) {
