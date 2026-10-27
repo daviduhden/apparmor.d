@@ -10,7 +10,7 @@ Main contents
 - Helper scripts: `scripts/enforce-complain-toggle.pl`, `scripts/merge-dupe-rules.pl`
 - `Makefile`: installs profiles, abstractions and helper scripts
 - `AGENTS.md` and `.agents/skills/`: agent instructions and task procedures
-- `scripts/check-agent-sync.py`: dependency-free structural guard for agent and
+- `scripts/check-agent-sync.pl`: dependency-free Perl structural guard for agent and
   skill maintenance; run it manually before completing repository changes
 
 Quick `Makefile` usage
@@ -121,7 +121,7 @@ Notes
 - `make test` is a placeholder that prints `No automated tests defined`. There
   are no unit tests or CI workflows. `make check` is the policy syntax gate.
 - To run the repository knowledge check locally, use
-  `python3 scripts/check-agent-sync.py --base <base-ref>`. The base ref must
+  `perl scripts/check-agent-sync.pl --base <base-ref>`. The base ref must
   point to the last synchronized revision. It checks change coverage, basic
   instruction structure, and detectable local Markdown references; review the
   diff for semantic relevance because the script cannot establish it.

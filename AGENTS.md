@@ -7,7 +7,7 @@ documentation lives in `README.md`; task-specific procedures live in
 ## What this repository is
 
 A small collection of AppArmor profiles for network daemons and helpers, one
-shared abstraction, two Perl maintenance scripts, and a Python agent-sync
+shared abstraction, two Perl maintenance scripts, and a Perl agent-sync
 validator. There is no application code, automated test suite, or CI workflow.
 
 ## Architecture
@@ -22,7 +22,7 @@ validator. There is no application code, automated test suite, or CI workflow.
 - **`abstractions/tor`** holds shared Tor rules (includes, network, devices,
   capabilities, pluggable transports). It is included by `usr.sbin.tor`.
 - **`scripts/*.pl`** are installed without the `.pl` suffix. The standalone
-  `scripts/check-agent-sync.py` is a manually run repository validator and is
+  `scripts/check-agent-sync.pl` is a manually run repository validator and is
   not installed.
 - **`Makefile`** installs, loads, syntax-checks, and uninstalls policy. It also
   creates empty `local/<profile-file>` stubs. Profiles end with
@@ -88,7 +88,7 @@ validator. There is no application code, automated test suite, or CI workflow.
 | Uninstall | `make uninstall` | Deletes shipped policy and empty `local/<profile-file>` stubs; preserves non-empty overrides; does not unload kernel policy; can mask failures. |
 | Enforce/complain toggle | `enforce-complain-toggle.pl [--state-file PATH] [--dry-run] downgrade\|restore` | Installed as `enforce-complain-toggle`. Requires `aa-complain`/`aa-enforce` and root for real changes. |
 | Duplicate-rule merger | `merge-dupe-rules.pl [--policy-dir DIR] [--apply] [--backup-suffix SUFFIX] [--verbose]` | Dry-run by default. Installed as `merge-dupe-rules`. |
-| Agent/skill synchronization | `python3 scripts/check-agent-sync.py --base <base-ref> [--head <head-ref>]` | Requires substantive instruction updates for project changes; checks instruction structure and local Markdown references. |
+| Agent/skill synchronization | `perl scripts/check-agent-sync.pl --base <base-ref> [--head <head-ref>]` | Requires substantive instruction updates for project changes; checks instruction structure and local Markdown references. |
 
 There is no build step, no unit-test command, linter configuration, or CI
 workflow. The agent-sync validator is run manually; do not describe it as a
@@ -197,7 +197,7 @@ repeat only if that review or its validation finds an error.
    and validator. Avoid recursive edits: one complete review after the task is
    sufficient unless it finds an error.
 5. Validate the changed instruction files' structure and local references, and
-   run `python3 scripts/check-agent-sync.py --base <base-ref>`. No CI workflow
+   run `perl scripts/check-agent-sync.pl --base <base-ref>`. No CI workflow
    invokes this check. It cannot judge whether the knowledge change is
    semantically relevant; the author must review that in the diff.
 6. Report which agents and skills were reviewed, which instruction files

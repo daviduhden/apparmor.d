@@ -205,7 +205,7 @@ instruction that proved inaccurate, remove obsolete or contradictory guidance,
 and keep cross-references working. Do not record one-off execution details.
 
 Every repository change must include a substantive, relevant agent/skills
-update. Run `python3 scripts/check-agent-sync.py --base <base-ref>` and review the diff for semantic relevance; the validator checks
+update. Run `perl scripts/check-agent-sync.pl --base <base-ref>` and review the diff for semantic relevance; the validator checks
 structure and detectable references but cannot establish relevance. Report the
 skills and agent instructions reviewed, updates made, checks actually run, and
 PASS/FAIL synchronization status. A failed or skipped synchronization means
