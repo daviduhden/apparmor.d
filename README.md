@@ -10,8 +10,9 @@ Main contents
 - Helper scripts: `scripts/enforce-complain-toggle.pl`, `scripts/merge-dupe-rules.pl`
 - `Makefile`: installs profiles, abstractions and helper scripts
 - `AGENTS.md` and `.agents/skills/`: agent instructions and task procedures
-- `scripts/check-agent-sync.pl`: dependency-free Perl structural guard for agent and
-  skill maintenance; run it manually before completing repository changes
+- `scripts/validate-agent-knowledge.py`: shared Python 3.11+ standard-library
+  validator for agent and skill maintenance; contract tests and a PR gate run
+  in GitHub Actions
 
 ## Policy and tool architecture
 
@@ -61,7 +62,7 @@ The three Perl sources have distinct roles:
   the default. `--apply` backs up and replaces changed files; the heuristic
   can canonicalize permission order and move intervening comment/blank lines
   after a merged rule, so inspect its plan before applying.
-- `check-agent-sync.pl` compares changed project paths with changed instruction
+- `validate-agent-knowledge.py` compares changed project paths with changed instruction
   files and checks basic structure and local Markdown links. It is a repository
   maintenance guard, not an AppArmor parser or semantic documentation review.
 
@@ -174,13 +175,14 @@ Notes
 - `make load` installs first, unloads the installed files, then invokes
   `apparmor_parser` with the configured flags. It requires root, errors if the
   parser is not installed, and stops at the first missing or rejected profile.
-- `make test` is a placeholder that prints `No automated tests defined`. There
-  are no unit tests or CI workflows. `make check` is the policy syntax gate.
+- `make test` is a placeholder that prints `No automated tests defined`; it is
+  not an AppArmor policy test suite. The agent validator has contract tests and
+  a GitHub Actions PR gate. `make check` is the policy syntax gate.
 - To run the repository knowledge check locally, use
-  `perl scripts/check-agent-sync.pl --base <base-ref>`. The base ref must
-  point to the last synchronized revision. It checks change coverage, basic
-  instruction structure, and detectable local Markdown references; review the
-  diff for semantic relevance because the script cannot establish it.
+  `python3 scripts/validate-agent-knowledge.py --scope worktree`. For a
+  committed range, provide both `--base` and `--head`. The shared contract
+  checks change coverage, instruction structure, local references, and
+  configured rules; review warnings for semantic relevance.
 - All profiles use `abi <abi/4.0>`; older parsers may fail to load them or may
   warn under `--Werror`. `@{system_share_dirs}` also depends on the host
   tunables.

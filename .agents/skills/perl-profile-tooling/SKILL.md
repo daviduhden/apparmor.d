@@ -184,7 +184,7 @@ For documentation-only changes, add comments next to the algorithm or
 side-effect boundary they explain. Describe regexes as the script's limited
 text recognizers, not as full AppArmor parsers; preserve executable Perl,
 regexes, quoting, and heredocs byte-for-byte. The repository also has
-`scripts/check-agent-sync.pl`, a read-only structural checker for instruction
+`scripts/validate-agent-knowledge.py`, a read-only structural checker for instruction
 updates; run it from the repository per `AGENTS.md`, but do not treat it as a
 policy parser or as evidence that documentation is semantically complete.
 
@@ -235,7 +235,7 @@ instruction that proved inaccurate, remove obsolete or contradictory guidance,
 and keep cross-references working. Do not record one-off execution details.
 
 Every repository change must include a substantive, relevant agent/skills
-update. Run `perl scripts/check-agent-sync.pl --base <base-ref>` and review the diff for semantic relevance; the validator checks
+update. Run `python3 scripts/validate-agent-knowledge.py --scope range --base <base-ref> --head HEAD` and review the diff for semantic relevance; the validator checks
 structure and detectable references but cannot establish relevance. Report the
 skills and agent instructions reviewed, updates made, checks actually run, and
 PASS/FAIL synchronization status. A failed or skipped synchronization means
