@@ -1,0 +1,14 @@
+[Unit]
+Description=Schedule AppArmor event collection
+
+[Timer]
+# Run daily with jitter so many hosts do not query their journals together.
+OnCalendar=*-*-* 03:15:00
+AccuracySec=1min
+Persistent=yes
+RandomizedDelaySec=15min
+Unit=collect-apparmor-denials.service
+
+[Install]
+# Makefile installation does not enable or start this timer.
+WantedBy=timers.target

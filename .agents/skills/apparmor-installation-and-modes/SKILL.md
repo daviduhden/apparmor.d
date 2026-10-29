@@ -27,6 +27,7 @@ without explicit authorization.
 | `INSTALL` | `install` | Resolved through `PATH`; not quoted. |
 | `APPARMOR_DIR` | `$(DESTDIR)/etc/apparmor.d` | Profile destination. |
 | `BINDIR` | `$(DESTDIR)$(PREFIX)/local/bin` | Default `/usr/local/bin`. `PREFIX=/usr/local` yields `/usr/local/local/bin`. |
+| `SYSTEMD_UNIT_DIR` | `$(DESTDIR)$(PREFIX)/lib/systemd/system` | Default `/usr/lib/systemd/system`; installation copies unit files but never activates them. |
 | `APPARMOR_PARSER` | `apparmor_parser` | Bare command name, resolved through `PATH`. |
 | `APPARMOR_FLAGS` | `-r -T -W` | Replace, skip cache read, write cache. |
 | `APPARMOR_CHECK_FLAGS` | `-Q -K --Werror` | Do not load, do not cache, warnings are errors. |
@@ -52,8 +53,13 @@ without explicit authorization.
 4. Copies the eight profiles into `$(APPARMOR_DIR)`.
 5. Creates an empty `$(APPARMOR_DIR)/local/<profile-file>` if missing. It does
    not overwrite an existing local override.
-6. Installs the two scripts as `$(BINDIR)/enforce-complain-toggle` and
-   `$(BINDIR)/merge-dupe-rules` (`.pl` removed, mode `0755`).
+6. Installs the Perl helpers as `$(BINDIR)/enforce-complain-toggle`,
+   `$(BINDIR)/merge-dupe-rules`, and `$(BINDIR)/collect-apparmor-denials`
+   (`.pl` removed, mode `0755`).
+7. Installs `collect-apparmor-denials.service` and
+   `collect-apparmor-denials.timer` into `$(SYSTEMD_UNIT_DIR)` (default
+   `/usr/lib/systemd/system`, mode `0644`). This does not run daemon-reload,
+   enable the timer, or start the service.
 
 Important: `install` does not syntax-check, load, or reload anything. It aborts
 if a diversion or copy fails; a missing source file is reported as "not found,
@@ -75,7 +81,9 @@ loaded.
 
 ### `make uninstall`
 
-- Removes the installed helper scripts.
+- Removes the installed helper scripts and the collector service/timer unit files.
+- Does not disable an enabled timer or stop an active unit; handle unit state
+  separately before uninstalling.
 - Removes every shipped profile and every **empty** `local/<profile-file>`
   stub. Non-empty overrides are preserved.
 - Removes the abstraction.

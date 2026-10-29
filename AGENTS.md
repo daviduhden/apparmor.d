@@ -22,7 +22,10 @@ shared abstraction, a shared Python agent knowledge validator, its contract test
   capabilities, pluggable transports). It is included by `usr.sbin.tor`.
 - **`scripts/*.pl`** are installed without the `.pl` suffix. The standalone
   `scripts/validate-agent-knowledge.py` is the repository validator and is not
-  installed.
+  installed. `collect-apparmor-denials.pl` reads journal/audit records and
+  writes reports under `/var/log/apparmor-denials` when run as root.
+- **`systemd/collect-apparmor-denials.*`** define a restricted root oneshot and
+  daily timer. `make install` copies them but does not enable or start them.
 - **`Makefile`** installs, loads, syntax-checks, and uninstalls policy. It also
   creates empty `local/<profile-file>` stubs. Profiles end with
   `include if exists <local/<profile-file>>`.
@@ -82,7 +85,8 @@ shared abstraction, a shared Python agent knowledge validator, its contract test
 | Syntax gate (no kernel load) | `make check` | Needs `apparmor_parser` and host AppArmor includes. Compiles in a temp tree with `-Q -K --Werror`. Not hermetic; stops at the first rejected profile. |
 | Help | `make help` | Prints targets and a subset of variables. |
 | Placeholder | `make test` | Prints "No automated tests defined"; it is not a test suite. |
-| Install | `make install` | Writes `/etc/apparmor.d`, may run `dpkg-divert`, writes helper scripts, creates `local/` stubs. Root normally required. |
+| Collector | `scripts/collect-apparmor-denials.pl` | Reads journal/audit records and writes reports under `/var/log/apparmor-denials`; the service runs as root and the timer is not enabled by installation. Never invoke it as a test. |
+| Install | `make install` | Writes `/etc/apparmor.d`, may run `dpkg-divert`, writes helper scripts and systemd units, creates `local/` stubs. Root normally required. It does not enable or start systemd units. |
 | Load | `make load` | Depends on `install` and `unload-profiles`; loads installed files with `-r -T -W` and stops at the first failure. Root required. |
 | Uninstall | `make uninstall` | Deletes shipped policy and empty `local/<profile-file>` stubs; preserves non-empty overrides; does not unload kernel policy; can mask failures. |
 | Enforce/complain toggle | `enforce-complain-toggle.pl [--state-file PATH] [--dry-run] downgrade\|restore` | Installed as `enforce-complain-toggle`. Requires `aa-complain`/`aa-enforce` and root for real changes. |

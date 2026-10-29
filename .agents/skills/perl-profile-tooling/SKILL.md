@@ -1,6 +1,6 @@
 ---
 name: perl-profile-tooling
-description: Use, review, or modify the repository's Perl helpers enforce-complain-toggle.pl and merge-dupe-rules.pl. Use when changing profile modes in bulk or merging duplicate rules, and when assessing the scripts' side effects.
+description: Use, review, or modify the repository's Perl helpers for AppArmor profile modes, duplicate-rule merging, and denial collection. Use when changing profile modes in bulk, merging duplicate rules, collecting audit events, or assessing these scripts' side effects.
 ---
 
 # Perl profile tooling
@@ -14,8 +14,9 @@ Use this skill when the task involves:
 - `scripts/merge-dupe-rules.pl` (installed as `merge-dupe-rules`);
 - reviewing their safety, exit codes, backups, or side effects.
 
-Both scripts modify system state and require authorization. Neither is a
-validator.
+The first two scripts modify system state and require authorization. The
+collector reads system logs and writes reports; it requires root but does not
+change AppArmor policy. None is a validator.
 
 ## enforce-complain-toggle.pl
 
@@ -240,3 +241,20 @@ structure and detectable references but cannot establish relevance. Report the
 skills and agent instructions reviewed, updates made, checks actually run, and
 PASS/FAIL synchronization status. A failed or skipped synchronization means
 the task is incomplete.
+
+## collect-apparmor-denials.pl
+
+The collector reads journal entries from the last 30 days and, when `ausearch`
+is available, matching audit records. It filters for AppArmor-related fields,
+deduplicates records, and writes a full event log plus a grouped summary under
+`/var/log/apparmor-denials`. Reports are created as root:adm with mode `0640`;
+the directory is root:adm with mode `0750` when the `adm` group exists, or
+root:root otherwise. It does not change policy or service state.
+
+`make install` copies its service and daily timer to
+`$(SYSTEMD_UNIT_DIR)` but does not reload systemd, enable the timer, or start
+the service. Review the unit and explicitly run `systemctl daemon-reload` and
+`systemctl enable --now collect-apparmor-denials.timer` when activation is
+intended. The service is a root oneshot with a restricted filesystem view and
+only its report directory writable. Do not run the collector merely to test it;
+it writes under `/var/log`.

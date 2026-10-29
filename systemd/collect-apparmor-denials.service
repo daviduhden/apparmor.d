@@ -1,0 +1,31 @@
+[Unit]
+Description=Collect recent AppArmor journal and audit events
+After=systemd-journald.service auditd.service
+
+[Service]
+# Root can read system logs; Group=adm matches the report directory access.
+Type=oneshot
+User=root
+Group=adm
+UMask=0027
+# Systemd creates the only writable persistent directory for this service.
+LogsDirectory=apparmor-denials
+LogsDirectoryMode=0750
+ExecStart=/usr/local/bin/collect-apparmor-denials
+
+# Keep log collection read-only outside the reports directory.
+NoNewPrivileges=yes
+PrivateDevices=yes
+PrivateTmp=yes
+ProtectClock=yes
+ProtectControlGroups=yes
+ProtectHome=yes
+ProtectHostname=yes
+ProtectKernelModules=yes
+ProtectKernelTunables=yes
+ProtectSystem=strict
+RestrictAddressFamilies=AF_UNIX
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+SystemCallArchitectures=native
+

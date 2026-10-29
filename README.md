@@ -7,7 +7,8 @@ Radicale, OpenDKIM, Fail2Ban, xd-torrent), plus utilities to manage them.
 Main contents
 - Profiles: `usr.sbin.tor`, `usr.bin.i2pd`, `usr.bin.monerod`, `usr.bin.monero-lws-daemon`, `usr.bin.radicale`, `usr.sbin.opendkim`, `usr.bin.xd-torrent`, `usr.bin.fail2ban-server`
 - Abstractions: `abstractions/tor`
-- Helper scripts: `scripts/enforce-complain-toggle.pl`, `scripts/merge-dupe-rules.pl`
+- Helper scripts: `scripts/enforce-complain-toggle.pl`, `scripts/merge-dupe-rules.pl`, `scripts/collect-apparmor-denials.pl`
+- systemd units: `systemd/collect-apparmor-denials.service` and `.timer`
 - `Makefile`: installs profiles, abstractions and helper scripts
 - `AGENTS.md` and `.agents/skills/`: agent instructions and task procedures
 - `scripts/validate-agent-knowledge.py`: shared Python 3.11+ standard-library
@@ -50,7 +51,7 @@ same profile. OpenDKIM has broad DAC capabilities and writable mail log trees.
 These are descriptions of the checked-in rules, not claims that each grant is
 required by every deployment.
 
-The three Perl sources have distinct roles:
+The Perl sources have distinct roles:
 
 - `enforce-complain-toggle.pl` snapshots names currently reported as enforce
   in securityfs, then runs `aa-complain`; `restore` reads the snapshot and
@@ -62,6 +63,7 @@ The three Perl sources have distinct roles:
   the default. `--apply` backs up and replaces changed files; the heuristic
   can canonicalize permission order and move intervening comment/blank lines
   after a merged rule, so inspect its plan before applying.
+- `collect-apparmor-denials.pl` reads recent journal and audit records, filters AppArmor-related lines, and atomically writes a detailed report plus grouped summary under `/var/log/apparmor-denials`. It requires root and does not change policy or service state.
 - `validate-agent-knowledge.py` compares changed project paths with changed instruction
   files and checks basic structure and local Markdown links. It is a repository
   maintenance guard, not an AppArmor parser or semantic documentation review.
@@ -71,8 +73,9 @@ profile sources; installed files are copies of the tracked profiles and
 abstraction.
 
 Quick `Makefile` usage
-- Install profiles and helpers (writes `/etc/apparmor.d` and the helper
-  directory; may run `dpkg-divert`; root normally required):
+- Install profiles, helpers, and systemd unit files (writes `/etc/apparmor.d`,
+  the helper directory, and `$(SYSTEMD_UNIT_DIR)`; may run `dpkg-divert`; root
+  normally required):
 
 ```sh
 make install PREFIX=/usr DESTDIR=
@@ -107,9 +110,9 @@ make help
 ```
 
 Other targets exist but are not part of the normal workflow:
-`install-scripts` (helpers only), `unload-profiles` (best effort, using the
-installed files), `clean` (no-op), and `test` (prints a placeholder; there are
-no automated tests).
+`install-scripts` (helpers only; it does not install systemd units),
+`unload-profiles` (best effort, using the installed files), `clean` (no-op),
+and `test` (prints a placeholder; there are no automated tests).
 
 Important variables
 - `PREFIX`: prefix for helper scripts (default: `/usr`). The scripts go to
@@ -120,6 +123,8 @@ Important variables
 - `APPARMOR_DIR`: profile destination (default: `$(DESTDIR)/etc/apparmor.d`).
   Profiles are not hard-wired to `/etc` when this variable changes.
 - `BINDIR`: helper script destination (default: `$(DESTDIR)$(PREFIX)/local/bin`).
+- `SYSTEMD_UNIT_DIR`: systemd unit destination (default:
+  `$(DESTDIR)$(PREFIX)/lib/systemd/system`).
 - `DIVERT`: use `dpkg-divert` to displace distro copies of the files listed in
   `DIVERT_FILES` (default: `yes`, or `no` when `DESTDIR` is set). With
   `DIVERT=no`, same-named distro files are overwritten without a backup.
@@ -131,8 +136,9 @@ Important variables
   the bare `apparmor_parser`, resolved through `PATH`).
 
 What `make install` does
-- Creates `$(APPARMOR_DIR)`, `$(APPARMOR_DIR)/abstractions/`, `$(APPARMOR_DIR)/local/`,
-  and `$(BINDIR)`, then copies `abstractions/tor`.
+- Creates `$(APPARMOR_DIR)`, `$(APPARMOR_DIR)/abstractions/`,
+  `$(APPARMOR_DIR)/local/`, `$(BINDIR)`, and `$(SYSTEMD_UNIT_DIR)`, then copies
+  `abstractions/tor`.
 - If diversion is enabled, diverts the entries in `DIVERT_FILES`
   (`usr.bin.i2pd`, the distro-only `system_tor`, and `abstractions/tor`) with
   `dpkg-divert` into `$(DIVERT_DIR)` (default `/etc/apparmor.d/distrib`). This
@@ -144,8 +150,13 @@ What `make install` does
 - Copies the listed profiles into `$(APPARMOR_DIR)`.
 - Creates empty stub files in `$(APPARMOR_DIR)/local/` for each profile (if
   missing).
-- Installs `enforce-complain-toggle` and `merge-dupe-rules` into `$(BINDIR)`
-  (the `.pl` suffix is removed).
+- Installs `enforce-complain-toggle`, `merge-dupe-rules`, and
+  `collect-apparmor-denials` into `$(BINDIR)` (the `.pl` suffix is removed).
+- Installs the collector service and timer under `$(SYSTEMD_UNIT_DIR)` (default
+  `/usr/lib/systemd/system`). Installation does not reload systemd, enable the
+  timer, or start either unit. After reviewing the unit, enable it separately
+  with `systemctl daemon-reload` and
+  `systemctl enable --now collect-apparmor-denials.timer`.
 - Does not syntax-check, load, or reload anything. It aborts if a diversion or
   a copy fails; a missing source file is reported as `not found, skipping`.
 
