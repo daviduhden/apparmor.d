@@ -23,7 +23,11 @@ shared abstraction, a shared Python agent knowledge validator, its contract test
 - **`scripts/*.pl`** are installed without the `.pl` suffix. The standalone
   `scripts/validate-agent-knowledge.py` is the repository validator and is not
   installed. `collect-apparmor-denials.pl` reads journal/audit records and
-  writes reports under `/var/log/apparmor-denials` when run as root.
+  writes reports under `/var/log/apparmor-denials` when run as root. Its
+  `ausearch` start date is passed as separate locale date/time arguments using
+  a two-digit year, which is required by the Debian audit-userspace parser;
+  the parser's exit status 1 with `<no matches>` on stderr is treated as an
+  empty result rather than a collection failure.
 - **`systemd/collect-apparmor-denials.*`** define a restricted root oneshot and
   daily timer. `make install` copies them but does not enable or start them.
 - **`Makefile`** installs, loads, syntax-checks, and uninstalls policy. It also

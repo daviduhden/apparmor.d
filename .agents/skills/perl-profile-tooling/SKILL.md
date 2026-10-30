@@ -258,3 +258,10 @@ the service. Review the unit and explicitly run `systemctl daemon-reload` and
 intended. The service is a root oneshot with a restricted filesystem view and
 only its report directory writable. Do not run the collector merely to test it;
 it writes under `/var/log`.
+
+The collector must pass the `ausearch` start date and time as separate
+arguments. With the Debian audit-userspace parser used by this host, the date
+must use a two-digit year (`%m/%d/%y`); a four-digit year is rejected even
+though it looks like a valid date to `date(1)`. That parser also returns exit
+status 1 and `<no matches>` on stderr for an empty audit result; the collector
+must treat that specific response as success with zero audit events.

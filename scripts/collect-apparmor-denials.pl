@@ -236,10 +236,16 @@ sub main {
         command_exists('dpkg-query')
       ? optional_output( 'dpkg-query', '-W', '-f=${Version}', 'apparmor' )
       : 'unavailable';
+    # ausearch expects the locale date and time as separate arguments. Its
+    # date parser accepts a two-digit year here; a four-digit year is rejected
+    # by the audit-userspace version shipped on Debian 13.
     my $since_audit =
       checked_output( 'date', 'date', '-d', "$RANGE_DAYS days ago",
-        '+%m/%d/%Y %T' );
+        '+%m/%d/%y %T' );
     $since_audit =~ s/\s+\z//;
+    my ( $since_audit_date, $since_audit_time ) = split /\s+/, $since_audit, 2;
+    die "date returned an invalid ausearch start time: $since_audit\n"
+      if !defined($since_audit_date) || !defined($since_audit_time);
 
 # Query the journal once, then apply the same AppArmor-field filter to audit data.
     my ( $journal, $journal_error, $journal_status ) = command_result(
@@ -263,8 +269,11 @@ sub main {
         {
             my ( $output, $error, $status ) =
               command_result( 'ausearch', '-m', $message_type, '-ts',
-                $since_audit );
-            if ( $status == 1 && !length($output) && !length($error) ) {
+                $since_audit_date, $since_audit_time );
+            if ( $status == 1
+                && !length($output)
+                && ( !length($error) || $error =~ /\A\s*<no matches>\s*\z/ ) )
+            {
                 next;
             }
             die "ausearch failed with exit status $status: $error"
