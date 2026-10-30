@@ -236,6 +236,7 @@ sub main {
         command_exists('dpkg-query')
       ? optional_output( 'dpkg-query', '-W', '-f=${Version}', 'apparmor' )
       : 'unavailable';
+
     # ausearch expects the locale date and time as separate arguments. Its
     # date parser accepts a two-digit year here; a four-digit year is rejected
     # by the audit-userspace version shipped on Debian 13.
@@ -270,7 +271,7 @@ sub main {
             my ( $output, $error, $status ) =
               command_result( 'ausearch', '-m', $message_type, '-ts',
                 $since_audit_date, $since_audit_time );
-            if ( $status == 1
+            if (   $status == 1
                 && !length($output)
                 && ( !length($error) || $error =~ /\A\s*<no matches>\s*\z/ ) )
             {
