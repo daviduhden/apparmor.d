@@ -7,7 +7,7 @@ documentation lives in `README.md`; task-specific procedures live in
 ## What this repository is
 
 A small collection of AppArmor profiles for network daemons and helpers, one
-shared abstraction, a shared Python agent knowledge validator, its contract tests, and a GitHub Actions PR gate.
+shared abstraction, a shared Perl agent knowledge validator, its contract tests, and a GitHub Actions PR gate.
 
 ## Architecture
 
@@ -21,7 +21,7 @@ shared abstraction, a shared Python agent knowledge validator, its contract test
 - **`abstractions/tor`** holds shared Tor rules (includes, network, devices,
   capabilities, pluggable transports). It is included by `usr.sbin.tor`.
 - **`scripts/*.pl`** are installed without the `.pl` suffix. The standalone
-  `scripts/validate-agent-knowledge.py` is the repository validator and is not
+  `scripts/validate-agent-knowledge.pl` is the repository validator and is not
   installed. `collect-apparmor-denials.pl` reads journal/audit records and
   writes reports under `/var/log/apparmor-denials` when run as root. Its
   `ausearch` start date is passed as separate locale date/time arguments using
@@ -95,11 +95,10 @@ shared abstraction, a shared Python agent knowledge validator, its contract test
 | Uninstall | `make uninstall` | Deletes shipped policy and empty `local/<profile-file>` stubs; preserves non-empty overrides; does not unload kernel policy; can mask failures. |
 | Enforce/complain toggle | `enforce-complain-toggle.pl [--state-file PATH] [--dry-run] downgrade\|restore` | Installed as `enforce-complain-toggle`. Requires `aa-complain`/`aa-enforce` and root for real changes. |
 | Duplicate-rule merger | `merge-dupe-rules.pl [--policy-dir DIR] [--apply] [--backup-suffix SUFFIX] [--verbose]` | Dry-run by default. Installed as `merge-dupe-rules`. |
-| Agent/skill synchronization | `python3 scripts/validate-agent-knowledge.py --scope worktree` or `--scope range --base <base-ref> --head <head-ref>` | Shared contract 1.0.0; checks substantive updates, instruction structure, references, and configured extensions. |
+| Agent/skill synchronization | `perl scripts/validate-agent-knowledge.pl --scope worktree` or `--scope range --base <base-ref> --head <head-ref>` | Shared contract 1.0.0; checks substantive updates, instruction structure, references, and configured extensions. |
 
 There is no application build step or AppArmor policy unit-test suite. Run the
-shared validator tests with `python3 -m unittest discover -s
-tests/agent_knowledge_validator -v`; GitHub Actions runs them and the range
+shared validator tests with `prove tests/agent_knowledge_validator/test_validator.pl`; GitHub Actions runs them and the range
 gate on pull requests. Do not describe the knowledge validator as a policy
 syntax check.
 
@@ -205,8 +204,8 @@ repeat only if that review or its validation finds an error.
    system, including this section, all skill links and names, and the validator
    and validator. Avoid recursive edits: one complete review after the task is
    sufficient unless it finds an error.
-5. Run `python3 scripts/validate-agent-knowledge.py --scope worktree` and
-   `python3 -m unittest discover -s tests/agent_knowledge_validator -v`.
+5. Run `perl scripts/validate-agent-knowledge.pl --scope worktree` and
+   `prove tests/agent_knowledge_validator/test_validator.pl`.
    For committed comparisons, pass both `--base` and `--head`; the PR workflow
    runs the same contract with the PR revisions. Review warnings for semantic
    relevance because automation cannot establish it.
@@ -233,10 +232,10 @@ repeat only if that review or its validation finds an error.
 
 ### Shared Agent Knowledge Validation Contract
 
-Use `python3 scripts/validate-agent-knowledge.py --scope worktree` for local
-changes and `python3 -m unittest discover -s tests/agent_knowledge_validator -v`
-for its contract tests. The validator requires Python 3.11+ and Git, uses only
-the Python standard library, and publishes contract version `1.0.0`. All
+Use `perl scripts/validate-agent-knowledge.pl --scope worktree` for local
+changes and `prove tests/agent_knowledge_validator/test_validator.pl`
+for its contract tests. The validator requires Perl 5.14+ (JSON::PP core) and Git, uses only
+core Perl modules, and publishes contract version `1.0.0`. All
 adopting repositories share the same CLI, AK001-AK006 identifiers, output
 schema, and exit codes (`0` pass, `1` policy failure, `2` execution/configuration
 error). For a pull request, pass both revisions with
@@ -246,7 +245,7 @@ Read [Agent Knowledge Validation Contract](docs/agent-knowledge-validation.md)
 for the complete rules, JSON schema, optional repository configuration,
 warning semantics, and extension process. AK004 and AK006 can require human
 review; their warnings do not prove or disprove semantic correctness. Keep the
-canonical script and black-box unittest suite byte-identical across adopting
+canonical script and black-box Perl suite byte-identical across adopting
 repositories. Repository-specific requirements belong in the documented TOML
 configuration or a stable `AKX...` extension, never in a private fork of the
 shared rules. The GitHub PR workflow runs the same tests and range command;
