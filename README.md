@@ -11,7 +11,7 @@ Main contents
 - systemd units: `systemd/collect-apparmor-denials.service` and `.timer`
 - `Makefile`: installs profiles, abstractions and helper scripts
 - `AGENTS.md` and `.agents/skills/`: agent instructions and task procedures
-- `scripts/validate-agent-knowledge.py`: shared Python 3.11+ standard-library
+- `scripts/validate-agent-knowledge.pl`: shared Perl 5.14+ (JSON::PP core) core-module
   validator for agent and skill maintenance; contract tests and a PR gate run
   in GitHub Actions
 
@@ -64,7 +64,7 @@ The Perl sources have distinct roles:
   can canonicalize permission order and move intervening comment/blank lines
   after a merged rule, so inspect its plan before applying.
 - `collect-apparmor-denials.pl` reads recent journal and audit records, filters AppArmor-related lines, and atomically writes a detailed report plus grouped summary under `/var/log/apparmor-denials`. It requires root and does not change policy or service state.
-- `validate-agent-knowledge.py` compares changed project paths with changed instruction
+- `validate-agent-knowledge.pl` compares changed project paths with changed instruction
   files and checks basic structure and local Markdown links. It is a repository
   maintenance guard, not an AppArmor parser or semantic documentation review.
 
@@ -190,7 +190,7 @@ Notes
   not an AppArmor policy test suite. The agent validator has contract tests and
   a GitHub Actions PR gate. `make check` is the policy syntax gate.
 - To run the repository knowledge check locally, use
-  `python3 scripts/validate-agent-knowledge.py --scope worktree`. For a
+  `perl scripts/validate-agent-knowledge.pl --scope worktree`. For a
   committed range, provide both `--base` and `--head`. The shared contract
   checks change coverage, instruction structure, local references, and
   configured rules; review warnings for semantic relevance.
